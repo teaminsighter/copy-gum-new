@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Card Demo - CopyGum</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 40px;
+    }
+
+    .demo-container {
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    .demo-title {
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 40px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 30px;
+    }
+
+    /* Clipboard Card Styles */
+    .clipboard-card {
+      width: 100%;
+      height: 420px;
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .clipboard-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Glass layers */
+    .card-glass-filter,
+    .card-glass-overlay,
+    .card-glass-specular {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    .card-glass-filter {
+      z-index: 0;
+      backdrop-filter: blur(10px);
+    }
+
+    .card-glass-overlay {
+      z-index: 1;
+      background: rgba(50, 50, 50, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Color card specific overlay */
+    .clipboard-card.color-card .card-glass-overlay {
+      background: var(--card-color);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .card-glass-specular {
+      z-index: 2;
+      box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.2),
+                  inset 0 0 20px rgba(255, 255, 255, 0.08);
+    }
+
+    /* Card content */
+    .card-content {
+      position: relative;
+      z-index: 3;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      color: white;
+    }
+
+    .clipboard-card.color-card .card-content {
+      color: var(--text-color);
+    }
+
+    /* Header */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .app-icon {
+      font-size: 28px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      backdrop-filter: blur(5px);
+    }
+
+    .card-info {
+      flex: 1;
+    }
+
+    .app-name {
+      font-size: 15px;
+      font-weight: 600;
+      opacity: 0.95;
+      margin-bottom: 4px;
+    }
+
+    .category-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Content area */
+    .card-main-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .color-preview {
+      width: 100%;
+      max-width: 200px;
+      aspect-ratio: 1;
+      background: var(--color-value);
+      border-radius: 16px;
+      border: 3px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3),
+                  inset 0 0 20px rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    .color-code {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'Monaco', 'Courier New', monospace;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Footer */
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .timestamp {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .char-count {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    /* Demo labels */
+    .card-label {
+      position: absolute;
+      top: -30px;
+      left: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 6px 12px;
+      border-radius: 6px;
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <h1 class="demo-title">🎨 Color Card Demo - CopyGum</h1>
+
+    <div class="cards-grid">
+      <!-- Color Card 1: Purple -->
+      <div class="clipboard-card color-card" style="--card-color: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --color-value: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --text-color: white;">
+        <div class="card-label">Gradient Color</div>
+        <div class="card-glass-filter"></div>
+        <div class="card-glass-overlay"></div>
+        <div class="card-glass-specular"></div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div class="app-icon">🎨</div>
+            <div class="card-info">
+              <div class="app-name">Figma</div>
+              <div class="category-badge">
+                <span>🎨</span>
+                <span>Color</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-main-content">
+            <div class="color-preview"></div>
+          </div>
+
+          <div class="color-code">#667eea → #764ba2</div>
+
+          <div class="card-footer">
+            <div class="timestamp">2 min ago</div>
+            <div class="char-count">24 chars</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Card 2: Hex Code -->
+      <div class="clipboard-card color-card" style="--card-color: #FF6B6B; --color-value: #FF6B6B; --text-color: white;">
+        <div class="card-label">Hex Color</div>
+        <div class="card-glass-filter"></div>
+        <div class="card-glass-overlay"></div>
+        <div class="card-glass-specular"></div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div class="app-icon">🎨</div>
+            <div class="card-info">
+              <div class="app-name">Photoshop</div>
+              <div class="category-badge">
+                <span>🎨</span>
+                <span>Color</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-main-content">
+            <div class="color-preview"></div>
+          </div>
+
+          <div class="color-code">#FF6B6B</div>
+
+          <div class="card-footer">
+            <div class="timestamp">5 min ago</div>
+            <div class="char-count">7 chars</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Card 3: RGB -->
+      <div class="clipboard-card color-card" style="--card-color: rgb(52, 211, 153); --color-value: rgb(52, 211, 153); --text-color: white;">
+        <div class="card-label">RGB Color</div>
+        <div class="card-glass-filter"></div>
+        <div class="card-glass-overlay"></div>
+        <div class="card-glass-specular"></div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div class="app-icon">💚</div>
+            <div class="card-info">
+              <div class="app-name">VS Code</div>
+              <div class="category-badge">
+                <span>🎨</span>
+                <span>Color</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-main-content">
+            <div class="color-preview"></div>
+          </div>
+
+          <div class="color-code">rgb(52, 211, 153)</div>
+
+          <div class="card-footer">
+            <div class="timestamp">10 min ago</div>
+            <div class="char-count">18 chars</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Card 4: Light Color (needs dark text) -->
+      <div class="clipboard-card color-card" style="--card-color: #F7E479; --color-value: #F7E479; --text-color: #000;">
+        <div class="card-label">Light Color (Dark Text)</div>
+        <div class="card-glass-filter"></div>
+        <div class="card-glass-overlay"></div>
+        <div class="card-glass-specular"></div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div class="app-icon">💛</div>
+            <div class="card-info">
+              <div class="app-name">Canva</div>
+              <div class="category-badge">
+                <span>🎨</span>
+                <span>Color</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-main-content">
+            <div class="color-preview"></div>
+          </div>
+
+          <div class="color-code">#F7E479</div>
+
+          <div class="card-footer">
+            <div class="timestamp">15 min ago</div>
+            <div class="char-count">7 chars</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regular Card (for comparison) -->
+      <div class="clipboard-card">
+        <div class="card-label">Regular Card (No Color)</div>
+        <div class="card-glass-filter"></div>
+        <div class="card-glass-overlay"></div>
+        <div class="card-glass-specular"></div>
+
+        <div class="card-content">
+          <div class="card-header">
+            <div class="app-icon">💻</div>
+            <div class="card-info">
+              <div class="app-name">VS Code</div>
+              <div class="category-badge">
+                <span>💻</span>
+                <span>Code</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-main-content">
+            <div style="font-family: 'Monaco', monospace; font-size: 14px; line-height: 1.8; opacity: 0.95;">
+              function calculateTotal(items) {<br>
+              &nbsp;&nbsp;return items.reduce(<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;(sum, item) => sum + item.price,<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;0<br>
+              &nbsp;&nbsp;);<br>
+              }
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <div class="timestamp">20 min ago</div>
+            <div class="char-count">93 chars</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

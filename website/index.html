@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CopyGum - Smart Clipboard Manager</title>
+  <meta name="description" content="A modern clipboard manager that remembers everything you copy. Available for Windows and macOS.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #f7e479;
+      --bg-dark: #0a0a0f;
+      --bg-card: #14141a;
+      --text: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.6);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Gradient background */
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(247, 228, 121, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(247, 228, 121, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    header {
+      padding: 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .logo svg {
+      width: 32px;
+      height: 32px;
+    }
+
+    nav a {
+      color: var(--text-muted);
+      text-decoration: none;
+      margin-left: 32px;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--primary);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+    }
+
+    .hero h1 {
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #ffffff 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 20px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 48px;
+      line-height: 1.6;
+    }
+
+    /* Download Buttons */
+    .download-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 32px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .download-btn.primary {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .download-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(247, 228, 121, 0.3);
+    }
+
+    .download-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .download-btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--primary);
+    }
+
+    .download-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .download-btn .size {
+      font-size: 12px;
+      opacity: 0.7;
+      font-weight: 400;
+    }
+
+    /* Version info */
+    .version-info {
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Screenshot */
+    .screenshot {
+      margin: 60px auto 0;
+      max-width: 1000px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .screenshot img {
+      width: 100%;
+      display: block;
+    }
+
+    .screenshot-placeholder {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, var(--bg-card) 0%, #1a1a22 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    /* Features */
+    .features {
+      padding: 100px 0;
+    }
+
+    .features h2 {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 60px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(247, 228, 121, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(247, 228, 121, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    /* Shortcut Section */
+    .shortcut-section {
+      text-align: center;
+      padding: 60px 0 100px;
+    }
+
+    .shortcut-section h2 {
+      font-size: 28px;
+      margin-bottom: 24px;
+    }
+
+    .shortcut-keys {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .key {
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border: 1px solid rgba(247, 228, 121, 0.4);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 18px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .key-plus {
+      color: var(--text-muted);
+      font-size: 20px;
+    }
+
+    .shortcut-section p {
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 60px 0 40px;
+      }
+
+      .download-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .download-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+
+      nav {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+
+  <div class="container">
+    <header>
+      <a href="/" class="logo">
+        <svg viewBox="0 0 32 32" fill="none">
+          <rect x="4" y="8" width="20" height="20" rx="4" fill="#f7e479" opacity="0.3"/>
+          <rect x="8" y="4" width="20" height="20" rx="4" fill="#f7e479"/>
+        </svg>
+        CopyGum
+      </a>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="https://github.com/teaminsighter/copy-gum-new" target="_blank">GitHub</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Your Clipboard,<br>Supercharged</h1>
+      <p>A modern clipboard manager that remembers everything you copy. Organize, search, and access your clipboard history instantly with a simple shortcut.</p>
+
+      <div class="download-buttons">
+        <a href="#" class="download-btn primary" id="download-windows">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+          </svg>
+          <div>
+            <div>Download for Windows</div>
+            <div class="size">v1.0.0 - MSI Installer</div>
+          </div>
+        </a>
+        <a href="#" class="download-btn secondary" id="download-macos">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+          </svg>
+          <div>
+            <div>Download for macOS</div>
+            <div class="size">v1.0.0 - DMG Installer</div>
+          </div>
+        </a>
+      </div>
+
+      <p class="version-info">Version 1.0.0 | Free &amp; Open Source</p>
+
+      <div class="screenshot">
+        <div class="screenshot-placeholder">
+          App Screenshot Coming Soon
+        </div>
+      </div>
+    </section>
+
+    <section class="features" id="features">
+      <h2>Everything You Need</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <h3>Unlimited History</h3>
+          <p>Never lose a copied item again. CopyGum stores everything you copy - text, images, links, and more.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3>Instant Search</h3>
+          <p>Find anything you've copied with blazing fast full-text search. Filter by type, date, or category.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📁</div>
+          <h3>Smart Categories</h3>
+          <p>Automatically organize clips into categories like Links, Code, Images, and more. Create custom categories too.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📌</div>
+          <h3>Pin Favorites</h3>
+          <p>Pin frequently used items for quick access. Your pinned clips are always just a keystroke away.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>Beautiful Themes</h3>
+          <p>Choose from multiple themes including Dark, Light, Nord, Dracula, and Solarized. Make it yours.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Lightning Fast</h3>
+          <p>Built with Rust and Tauri for native performance. Opens instantly, uses minimal resources.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="shortcut-section">
+      <h2>Access Anywhere</h2>
+      <div class="shortcut-keys">
+        <span class="key" id="modifier-key">Ctrl</span>
+        <span class="key-plus">+</span>
+        <span class="key">Shift</span>
+        <span class="key-plus">+</span>
+        <span class="key">V</span>
+      </div>
+      <p>Press the shortcut anywhere to open CopyGum as an overlay</p>
+    </section>
+
+    <footer>
+      <p>Made with care by <a href="https://github.com/teaminsighter" target="_blank">Team Insighter</a> | <a href="https://github.com/teaminsighter/copy-gum-new" target="_blank">View on GitHub</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Detect OS and update modifier key
+    const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMac) {
+      document.getElementById('modifier-key').textContent = 'Cmd';
+    }
+
+    // Download links (update these when releases are available)
+    const windowsDownload = document.getElementById('download-windows');
+    const macosDownload = document.getElementById('download-macos');
+
+    // GitHub releases URL pattern
+    const releasesBase = 'https://github.com/teaminsighter/copy-gum-new/releases/latest/download/';
+
+    windowsDownload.href = releasesBase + 'CopyGum_1.0.0_x64-setup.exe';
+    macosDownload.href = releasesBase + 'CopyGum_1.0.0_aarch64.dmg';
+
+    // Auto-detect OS and highlight appropriate button
+    if (isMac) {
+      macosDownload.classList.remove('secondary');
+      macosDownload.classList.add('primary');
+      windowsDownload.classList.remove('primary');
+      windowsDownload.classList.add('secondary');
+    }
+  </script>
+</body>
+</html>
