@@ -76,8 +76,8 @@ fn init_regexes() {
 ///
 /// Detection order (priority):
 /// 1. Hex Color (#RRGGBB)
-/// 2. URL (http://, https://, www.)
-/// 3. Email (contains @)
+/// 2. Email (contains @) - checked before URL to avoid TLD false positives
+/// 3. URL (http://, https://, www.)
 /// 4. Phone (phone number patterns)
 /// 5. Number (pure digits)
 /// 6. Code (programming patterns)
@@ -101,17 +101,17 @@ pub fn detect_content_type(content: &str) -> ContentType {
         }
     }
 
-    // 2. Check for URL
-    if let Some(regex) = URL_REGEX.get() {
-        if regex.is_match(trimmed) {
-            return ContentType::Url;
-        }
-    }
-
-    // 3. Check for email
+    // 2. Check for email (before URL to avoid false positives with .co, .io TLDs)
     if let Some(regex) = EMAIL_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Email;
+        }
+    }
+
+    // 3. Check for URL
+    if let Some(regex) = URL_REGEX.get() {
+        if regex.is_match(trimmed) {
+            return ContentType::Url;
         }
     }
 

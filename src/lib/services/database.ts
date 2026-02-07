@@ -10,6 +10,7 @@ export interface ClipboardItem {
   category: string;
   app_name?: string;
   app_icon?: string;
+  app_bundle_id?: string;
   is_image: boolean;
   image_path?: string;
   image_thumbnail?: Uint8Array;
@@ -107,7 +108,8 @@ export async function saveClipboardItem(
   contentType: string,
   category: string,
   appName?: string,
-  appIcon?: string
+  appIcon?: string,
+  appBundleId?: string
 ): Promise<{ id: number; isNew: boolean }> {
   try {
     const database = await getDb();
@@ -141,9 +143,9 @@ export async function saveClipboardItem(
 
     const result = await database.execute(
       `INSERT INTO clipboard_items
-       (content, content_type, category, app_name, app_icon, is_image, timestamp, is_pinned, is_deleted)
-       VALUES ($1, $2, $3, $4, $5, 0, $6, 0, 0)`,
-      [content, contentType, category, appName || null, appIcon || null, timestamp]
+       (content, content_type, category, app_name, app_icon, app_bundle_id, is_image, timestamp, is_pinned, is_deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, 0, $7, 0, 0)`,
+      [content, contentType, category, appName || null, appIcon || null, appBundleId || null, timestamp]
     );
 
     const newId = result.lastInsertId || 0;
@@ -165,7 +167,8 @@ export async function saveImageClipboardItem(
   imageSize: number,
   dominantColor: string | null,
   appName?: string,
-  appIcon?: string
+  appIcon?: string,
+  appBundleId?: string
 ): Promise<{ id: number; isNew: boolean }> {
   try {
     const database = await getDb();
@@ -198,16 +201,17 @@ export async function saveImageClipboardItem(
 
     const result = await database.execute(
       `INSERT INTO clipboard_items
-       (content, content_type, category, app_name, app_icon, is_image,
+       (content, content_type, category, app_name, app_icon, app_bundle_id, is_image,
         image_path, image_width, image_height, image_size, image_dominant_color,
         timestamp, is_pinned, is_deleted)
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, 0, 0)`,
+       VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10, $11, $12, 0, 0)`,
       [
         filename,           // content - use filename as display text
         'image',            // content_type
         'image',            // category
         appName || null,
         appIcon || null,
+        appBundleId || null,
         imagePath,
         imageWidth,
         imageHeight,

@@ -55,10 +55,12 @@
 
 {#if show}
   <!-- Backdrop -->
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div class="modal-backdrop" transition:fade={{ duration: 200 }} on:click={handleCancel}>
   </div>
 
   <!-- Modal -->
+  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
   <div
     class="modal"
     transition:scale={{ duration: 200, start: 0.95 }}

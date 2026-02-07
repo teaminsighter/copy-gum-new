@@ -471,6 +471,7 @@
       <ClipboardCard
         itemId={item.id}
         appIcon={item.app_icon || '📋'}
+        appBundleId={item.app_bundle_id}
         appName={item.app_name || 'Unknown'}
         category={item.category}
         content={item.content}

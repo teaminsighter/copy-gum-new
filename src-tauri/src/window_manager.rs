@@ -1,14 +1,15 @@
 // Window Manager - Handles global shortcuts and window visibility
 use tauri::{AppHandle, Manager, PhysicalPosition};
 
+// Allow deprecated cocoa APIs until migration to objc2
+#[allow(deprecated)]
 #[cfg(target_os = "macos")]
 use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+#[allow(deprecated)]
 #[cfg(target_os = "macos")]
 use cocoa::base::{id, nil, YES};
 
 // CGWindowLevel constants from CoreGraphics
-#[cfg(target_os = "macos")]
-const K_CG_FLOATING_WINDOW_LEVEL_KEY: i32 = 5;
 #[cfg(target_os = "macos")]
 const K_CG_MAXIMUM_WINDOW_LEVEL_KEY: i32 = 14;
 
@@ -18,14 +19,19 @@ extern "C" {
     fn CGWindowLevelForKey(key: i32) -> i32;
 }
 
+#[allow(deprecated)]
 #[tauri::command]
 pub fn toggle_window(app: AppHandle) -> Result<(), String> {
+    println!("[CopyGum] toggle_window called");
+
     if let Some(window) = app.get_webview_window("main") {
         match window.is_visible() {
             Ok(true) => {
+                println!("[CopyGum] Window is visible, hiding...");
                 window.hide().map_err(|e| e.to_string())?;
             }
             Ok(false) => {
+                println!("[CopyGum] Window is hidden, showing...");
 
                 // Position window at bottom of screen
                 position_window_right(&window)?;
@@ -170,17 +176,28 @@ pub fn setup_global_shortcut(app: &AppHandle) -> Result<(), String> {
 
     // Register Cmd+Shift+V (or Ctrl+Shift+V on other platforms)
     let shortcut = "CommandOrControl+Shift+V";
-    let shortcut_parsed = shortcut.parse::<Shortcut>().map_err(|e| e.to_string())?;
+    println!("[CopyGum] Registering global shortcut: {}", shortcut);
+
+    let shortcut_parsed = shortcut.parse::<Shortcut>().map_err(|e| {
+        println!("[CopyGum] Failed to parse shortcut: {}", e);
+        e.to_string()
+    })?;
 
     let app_handle = app.clone();
     app.global_shortcut()
         .on_shortcut(shortcut_parsed, move |_app, _shortcut, event| {
+            println!("[CopyGum] Shortcut event received: {:?}", event.state);
             // Only toggle on key press (Released state), not on key down
             if event.state == ShortcutState::Released {
+                println!("[CopyGum] Shortcut released, toggling window...");
                 let _ = toggle_window(app_handle.clone());
             }
         })
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            println!("[CopyGum] Failed to register shortcut: {}", e);
+            e.to_string()
+        })?;
 
+    println!("[CopyGum] Global shortcut registered successfully!");
     Ok(())
 }

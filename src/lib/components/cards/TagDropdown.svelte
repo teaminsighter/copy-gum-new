@@ -9,7 +9,10 @@
   export let onToggleTag: (tagName: string) => void = () => {};
   export let onEditTag: (tagName: string) => void = () => {};
   export let onDeleteTag: (tagName: string) => void = () => {};
-  export let onCreateTag: () => void = () => {};
+  // Note: onCreateTag is handled by parent component, not used directly here
+  export let onCreateTag: (() => void) | undefined = undefined;
+  // Suppress unused warning - this prop is for parent component interface consistency
+  void onCreateTag;
 
   // Get all tags (default + custom) from store
   $: availableTags = $allTags;

@@ -30,7 +30,12 @@
 
   export let itemId: number; // Database ID for this clipboard item
   export let appIcon: string = '💻';
+  export let appBundleId: string | undefined = undefined;
   export let appName: string = 'Unknown';
+
+  // System icon (fetched from macOS)
+  let systemIconUrl: string | null = null;
+  let iconLoading = false;
   export let category: string = 'text'; // Category ID (not label)
 
   // Map category ID to label
@@ -501,6 +506,23 @@
   onMount(() => {
     window.addEventListener(CLOSE_DROPDOWNS_EVENT, handleCloseDropdowns);
 
+    // Fetch system icon if bundle ID is available
+    if (appBundleId) {
+      iconLoading = true;
+      invoke<string>('get_app_icon_data', {
+        bundleId: appBundleId,
+        appName: appName
+      }).then(iconData => {
+        // Check if it's a data URL (system icon) or emoji
+        if (iconData.startsWith('data:image/')) {
+          systemIconUrl = iconData;
+        }
+        iconLoading = false;
+      }).catch(() => {
+        iconLoading = false;
+      });
+    }
+
     // Subscribe to event bus for real-time tag/category renames
     const unsubscribe = eventBus.subscribe(event => {
       if (!event) return;
@@ -564,7 +586,13 @@
     <div class="card-header">
       <div class="header-line-1">
         <div class="app-info">
-          <div class="app-icon">{appIcon}</div>
+          <div class="app-icon">
+            {#if systemIconUrl}
+              <img src={systemIconUrl} alt={appName} class="system-icon" />
+            {:else}
+              {appIcon}
+            {/if}
+          </div>
           <div class="app-label" style="position: relative;">
             <span class="app-name">{appName}</span>
             <span class="separator">|</span>
@@ -1040,6 +1068,13 @@
     justify-content: center;
     font-size: 20px;
     flex-shrink: 0;
+  }
+
+  .app-icon .system-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: 4px;
   }
 
   /* Stronger shadow for app icon on color/image cards */

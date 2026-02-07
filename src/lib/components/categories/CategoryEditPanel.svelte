@@ -171,6 +171,7 @@
               class:selected={selectedColor === color}
               style="background: {color};"
               on:click={(e) => selectColor(color, e)}
+              aria-label="Select color {color}"
             >
             </button>
           {/each}

@@ -193,7 +193,7 @@ mod tests {
     fn test_extract_dominant_color_mixed() {
         // Create an image with mixed colors
         let mut img_data = RgbImage::new(100, 100);
-        for (x, y, pixel) in img_data.enumerate_pixels_mut() {
+        for (x, _y, pixel) in img_data.enumerate_pixels_mut() {
             if x < 50 {
                 *pixel = Rgb([255, 0, 0]); // Red
             } else {

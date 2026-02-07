@@ -24,6 +24,14 @@
     "clipboard-manager:allow-read-image",
     "clipboard-manager:allow-write-image",
     "fs:default",
-    "fs:allow-read"
+    "fs:allow-read",
+    "global-shortcut:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-is-registered",
+    "shell:default",
+    "dialog:default",
+    "dialog:allow-save",
+    "dialog:allow-open"
   ]
 }

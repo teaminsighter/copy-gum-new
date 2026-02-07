@@ -14,6 +14,13 @@ pub fn init_database() -> Vec<Migration> {
             sql: include_str!("schema.sql"),
             kind: MigrationKind::Up,
         },
+        // Migration 2: Add app_bundle_id column for system icon fetching
+        Migration {
+            version: 2,
+            description: "add_app_bundle_id_column",
+            sql: "ALTER TABLE clipboard_items ADD COLUMN app_bundle_id TEXT;",
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

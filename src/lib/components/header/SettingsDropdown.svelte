@@ -1098,11 +1098,11 @@
             built with Tauri + Svelte
           </div>
           <div class="about-links">
-            <a href="#" class="about-link">Website</a>
+            <span class="about-link">Website</span>
             <span class="about-divider">•</span>
-            <a href="#" class="about-link">GitHub</a>
+            <span class="about-link">GitHub</span>
             <span class="about-divider">•</span>
-            <a href="#" class="about-link">Support</a>
+            <span class="about-link">Support</span>
           </div>
         </div>
       </div>
@@ -1259,15 +1259,6 @@
     letter-spacing: 1px;
   }
 
-  .input-with-button {
-    display: flex;
-    gap: 8px;
-  }
-
-  .input-with-button .settings-input {
-    flex: 1;
-  }
-
   .verify-button {
     padding: 10px 20px;
     background: rgba(247, 228, 121, 0.15);
@@ -1285,71 +1276,6 @@
     background: rgba(247, 228, 121, 0.25);
     transform: translateY(-1px);
   }
-
-  /* Radio Container */
-  .radio-container {
-    --main-color: #f7e479;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    padding-left: 0.5rem;
-    margin-bottom: 12px;
-    min-height: calc(2.5rem * var(--total-radio)); /* Increased from 2rem */
-  }
-
-  .radio-container input {
-    cursor: pointer;
-    appearance: none;
-    height: 2.5rem; /* Increased from 2rem */
-  }
-
-  .radio-container label {
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 13px;
-    font-weight: 500;
-    position: relative;
-    top: calc(-2.5rem * var(--total-radio)); /* Increased from 2rem */
-    left: 1.8rem; /* Increased from 1.5rem */
-    height: 2.5rem; /* Increased from 2rem */
-    display: flex;
-    align-items: center;
-    transition: all 0.2s;
-    padding-right: 8px; /* Add padding to prevent overflow */
-  }
-
-  .radio-container input:checked + label {
-    color: var(--main-color);
-    font-weight: 600;
-  }
-
-  .glider-container {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(27, 27, 27, 1) 50%, rgba(0, 0, 0, 0) 100%);
-    width: 1px;
-    pointer-events: none;
-  }
-
-  .glider {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translate(-50%, 0);
-    width: 0.5rem;
-    height: 2.5rem; /* Increased from 2rem */
-    background: var(--main-color);
-    border-radius: 1rem;
-    transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 8px rgba(247, 228, 121, 0.5);
-  }
-
-  .radio-container input:nth-of-type(1):checked ~ .glider-container .glider { top: 0; }
-  .radio-container input:nth-of-type(2):checked ~ .glider-container .glider { top: 2.5rem; } /* Changed from 2rem */
-  .radio-container input:nth-of-type(3):checked ~ .glider-container .glider { top: 5rem; } /* Changed from 4rem */
-  .radio-container input:nth-of-type(4):checked ~ .glider-container .glider { top: 7.5rem; } /* Changed from 6rem */
 
   /* Toggle Switch */
   .toggle-row {

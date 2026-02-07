@@ -40,6 +40,7 @@ fn main() {
             export::save_export_file,
             export::read_import_file,
             export::get_export_stats,
+            app_icons::get_app_icon_data,
         ])
         .manage(clipboard_monitor::ClipboardMonitor::new())
         .setup(|app| {
@@ -53,11 +54,15 @@ fn main() {
             {
                 use tauri::Manager;
                 if let Some(window) = app.get_webview_window("main") {
+                    // Allow deprecated cocoa APIs until migration to objc2
+                    #[allow(deprecated)]
                     use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
+                    #[allow(deprecated)]
                     use cocoa::base::id;
                     use objc::{msg_send, sel, sel_impl};
 
                     if let Ok(ns_win_ptr) = window.ns_window() {
+                        #[allow(deprecated)]
                         unsafe {
                             let ns_win = ns_win_ptr as id;
 

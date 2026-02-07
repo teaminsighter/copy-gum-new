@@ -1,6 +1,8 @@
 // App Detector Module - Detects the frontmost application on macOS
 // This module provides functionality to identify which app the user copied from
 
+// Allow deprecated cocoa APIs until migration to objc2
+#[allow(deprecated)]
 #[cfg(target_os = "macos")]
 use cocoa::base::{id, nil};
 #[cfg(target_os = "macos")]
@@ -23,6 +25,7 @@ impl Default for AppInfo {
 }
 
 /// Get the frontmost (active) application on macOS
+#[allow(deprecated)]
 #[cfg(target_os = "macos")]
 pub fn get_frontmost_app() -> AppInfo {
     unsafe {
@@ -131,6 +134,7 @@ pub fn get_frontmost_app() -> AppInfo {
 }
 
 /// Convert NSString to Rust String
+#[allow(deprecated)]
 #[cfg(target_os = "macos")]
 unsafe fn nsstring_to_string(nsstring: id) -> String {
     let utf8_ptr: *const i8 = msg_send![nsstring, UTF8String];

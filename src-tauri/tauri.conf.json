@@ -1,7 +1,8 @@
 {
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "CopyGum",
   "version": "1.0.0",
-  "identifier": "com.copygum.app",
+  "identifier": "com.copygum.clipboard",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -42,7 +43,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis", "dmg", "app"],
+    "targets": ["dmg", "app"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -50,6 +51,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "category": "Utility",
+    "shortDescription": "Modern clipboard manager for macOS",
+    "longDescription": "CopyGum is a powerful clipboard manager that helps you organize and access your clipboard history with a beautiful overlay interface. Features include smart content detection, categories, tags, and global keyboard shortcuts.",
+    "copyright": "Copyright 2024 CopyGum",
     "windows": {
       "certificateThumbprint": null,
       "timestampUrl": null,
@@ -58,7 +63,11 @@
       }
     },
     "macOS": {
-      "minimumSystemVersion": "10.13"
+      "minimumSystemVersion": "10.15",
+      "entitlements": null,
+      "exceptionDomain": null,
+      "signingIdentity": null,
+      "providerShortName": null
     }
   },
   "plugins": {}
