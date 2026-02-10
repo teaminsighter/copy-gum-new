@@ -64,10 +64,11 @@
     },
     "macOS": {
       "minimumSystemVersion": "10.15",
-      "entitlements": null,
+      "entitlements": "Entitlements.plist",
       "exceptionDomain": null,
       "signingIdentity": null,
-      "providerShortName": null
+      "providerShortName": null,
+      "infoPlist": "Info.plist"
     }
   },
   "plugins": {}

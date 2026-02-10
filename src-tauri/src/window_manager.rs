@@ -7,17 +7,13 @@ use tauri::{AppHandle, Manager, PhysicalPosition};
 use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
 #[allow(deprecated)]
 #[cfg(target_os = "macos")]
-use cocoa::base::{id, nil, YES};
+use cocoa::base::{id, NO};
 
-// CGWindowLevel constants from CoreGraphics
+// Window level constants for macOS
+// NSStatusWindowLevel (25) - above normal windows and floating panels, below alerts
+// This is the level used by menu bar extras and overlay utilities
 #[cfg(target_os = "macos")]
-const K_CG_MAXIMUM_WINDOW_LEVEL_KEY: i32 = 14;
-
-#[cfg(target_os = "macos")]
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGWindowLevelForKey(key: i32) -> i32;
-}
+const OVERLAY_WINDOW_LEVEL: i64 = 25;
 
 #[allow(deprecated)]
 #[tauri::command]
@@ -36,61 +32,45 @@ pub fn toggle_window(app: AppHandle) -> Result<(), String> {
                 // Position window at bottom of screen
                 position_window_right(&window)?;
 
-                // On macOS, set window level and activate BEFORE showing
+                // Show window first using Tauri
+                window.show().map_err(|e| e.to_string())?;
+
+                // Set always on top via Tauri API
+                window.set_always_on_top(true).map_err(|e| e.to_string())?;
+
                 #[cfg(target_os = "macos")]
                 {
                     use objc::msg_send;
                     use objc::sel;
                     use objc::sel_impl;
-                    use objc::class;
 
-                    // Get the maximum window level from CoreGraphics
-                    let max_level = unsafe { CGWindowLevelForKey(K_CG_MAXIMUM_WINDOW_LEVEL_KEY) };
-
-                    // STEP 1: Activate the app FIRST (before showing window)
-                    unsafe {
-                        let ns_app: id = msg_send![class!(NSApplication), sharedApplication];
-
-                        // NSApplicationActivationPolicyRegular = 0 (standard app behavior)
-                        let _: () = msg_send![ns_app, setActivationPolicy: 0_i64];
-
-                        // Force activate ignoring other apps
-                        let _: () = msg_send![ns_app, activateIgnoringOtherApps: YES];
-                    }
-
-                    // STEP 2: Configure window level BEFORE showing
                     if let Ok(ns_win_ptr) = window.ns_window() {
                         unsafe {
                             let ns_win = ns_win_ptr as id;
 
-                            // Set collection behavior
+                            // Set overlay window level (NSStatusWindowLevel = 25)
+                            // High enough to float over all normal windows but below system alerts
+                            let _: () = msg_send![ns_win, setLevel: OVERLAY_WINDOW_LEVEL];
+
+                            // Consistent collection behavior - stationary overlay across all spaces
                             let behavior = NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
                             ns_win.setCollectionBehavior_(behavior);
 
-                            // Don't hide when app loses focus
-                            let _: () = msg_send![ns_win, setHidesOnDeactivate: false];
+                            // Don't hide when app deactivates
+                            let _: () = msg_send![ns_win, setHidesOnDeactivate: NO];
 
-                            // Use maximum window level BEFORE showing (critical fix!)
-                            let _: () = msg_send![ns_win, setLevel: max_level as i64];
-                        }
-                    }
-
-                    // STEP 3: Now show the window (after level is set)
-                    window.show().map_err(|e| e.to_string())?;
-
-                    // STEP 4: Order front after showing
-                    if let Ok(ns_win_ptr) = window.ns_window() {
-                        unsafe {
-                            let ns_win = ns_win_ptr as id;
-
-                            // Make it the key window and bring to front
-                            let _: () = msg_send![ns_win, makeKeyAndOrderFront: nil];
-
-                            // Nuclear option - order front regardless of everything
+                            // Bring to front WITHOUT activating the app (non-focus-stealing)
+                            // orderFrontRegardless shows the window above others without
+                            // making CopyGum the active application
                             let _: () = msg_send![ns_win, orderFrontRegardless];
+
+                            // Make key so it can receive keyboard input
+                            let _: () = msg_send![ns_win, makeKeyWindow];
+
+                            println!("[CopyGum] Window shown with overlay level {}", OVERLAY_WINDOW_LEVEL);
                         }
                     }
                 }
@@ -104,10 +84,6 @@ pub fn toggle_window(app: AppHandle) -> Result<(), String> {
                         HWND_TOPMOST, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
                     };
 
-                    // Show the window first
-                    window.show().map_err(|e| e.to_string())?;
-
-                    // Get HWND and set topmost
                     if let Ok(hwnd) = window.hwnd() {
                         unsafe {
                             let hwnd = HWND(hwnd.0 as *mut std::ffi::c_void);

@@ -58,8 +58,11 @@ fn main() {
                     #[allow(deprecated)]
                     use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
                     #[allow(deprecated)]
-                    use cocoa::base::id;
+                    use cocoa::base::{id, NO};
                     use objc::{msg_send, sel, sel_impl};
+
+                    // NSStatusWindowLevel = 25 (same as window_manager.rs)
+                    const OVERLAY_WINDOW_LEVEL: i64 = 25;
 
                     if let Ok(ns_win_ptr) = window.ns_window() {
                         #[allow(deprecated)]
@@ -67,17 +70,18 @@ fn main() {
                             let ns_win = ns_win_ptr as id;
 
                             // Set collection behavior for multi-space and fullscreen support
+                            // Must match the behavior set in window_manager::toggle_window
                             let behavior = NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
                                 | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
                             ns_win.setCollectionBehavior_(behavior);
 
-                            // Set window level to screensaver level (highest)
-                            let _: () = msg_send![ns_win, setLevel: 1000_i64];
+                            // Set overlay window level (consistent with toggle_window)
+                            let _: () = msg_send![ns_win, setLevel: OVERLAY_WINDOW_LEVEL];
 
-                            // Don't hide when app loses focus
-                            let _: () = msg_send![ns_win, setHidesOnDeactivate: false];
+                            // Don't hide when app loses focus - critical for overlay behavior
+                            let _: () = msg_send![ns_win, setHidesOnDeactivate: NO];
                         }
                     }
                 }
