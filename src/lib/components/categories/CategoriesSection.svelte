@@ -6,6 +6,7 @@
   import CategoryPill from './CategoryPill.svelte';
   import CategoryEditPanel from './CategoryEditPanel.svelte';
   import { categoryCustomizations, customCategories, categoryOrder, updateCategoryIcon, updateCategoryColor, updateCustomCategory, reorderCategories } from '../../stores/categoryStore';
+  import { selectedCategory } from '../../stores/clipboardStore';
   import { clickOutside } from '../../utils/clickOutside';
   import { selectedCategoryIndex, totalCategories, focusLayer } from '../../stores/navigationStore';
 
@@ -95,6 +96,7 @@
 
   function handleCategoryClick(categoryId: string) {
     activeCategory = categoryId;
+    selectedCategory.set(categoryId === 'all' ? null : categoryId);
   }
 
   // Export function to activate category by index (for keyboard navigation)
