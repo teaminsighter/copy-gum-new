@@ -23,9 +23,11 @@
   import { showSuccess, showError } from '../../stores/toastStore';
   import {
     filteredItems,
+    clipboardItems,
     isLoading as storeLoading,
     error as storeError,
     selectedCategory,
+    debouncedSearchQuery,
     searchQuery,
     togglePin,
     deleteItem
@@ -43,6 +45,44 @@
   $: items = $filteredItems;
   $: loading = $storeLoading;
   $: errorMessage = $storeError;
+
+  // Category display name map for empty state messages
+  const categoryDisplayNames: Record<string, string> = {
+    password: 'Password', apikey: 'API Key', private: 'Private',
+    email: 'Email', phone: 'Phone', links: 'Links', code: 'Code',
+    color: 'Color', image: 'Image', number: 'Number', text: 'Text'
+  };
+
+  // Determine empty state context
+  $: hasAnyItems = $clipboardItems.length > 0;
+  $: activeSearch = $debouncedSearchQuery;
+  $: activeCategory = $selectedCategory;
+  $: emptyStateInfo = getEmptyStateInfo(hasAnyItems, activeCategory, activeSearch);
+
+  function getEmptyStateInfo(hasItems: boolean, category: string | null, search: string) {
+    if (search) {
+      return {
+        icon: '🔍',
+        title: `No results for "${search}"`,
+        message: category
+          ? `Try a different search or switch to "All" categories.`
+          : 'Try a different search term.'
+      };
+    }
+    if (category) {
+      const displayName = categoryDisplayNames[category] || category;
+      return {
+        icon: '📂',
+        title: `No ${displayName} items yet`,
+        message: `Copy a ${displayName.toLowerCase()} item and it will appear here.`
+      };
+    }
+    return {
+      icon: '📋',
+      title: 'No clipboard history yet',
+      message: 'Copy something to get started. Your clipboard items will appear here.'
+    };
+  }
 
   // Helper to convert local file paths to Tauri asset URLs
   function getImageUrl(imagePath: string | undefined): string {
@@ -459,11 +499,11 @@
       message={errorMessage}
     />
   {:else if items.length === 0}
-    <!-- Show empty state when no items -->
+    <!-- Show empty state with context-aware message -->
     <EmptyState
-      icon="📋"
-      title="No clipboard history yet"
-      message="Copy something to get started. Your clipboard items will appear here."
+      icon={emptyStateInfo.icon}
+      title={emptyStateInfo.title}
+      message={emptyStateInfo.message}
     />
   {:else}
     <!-- Show actual cards from database -->

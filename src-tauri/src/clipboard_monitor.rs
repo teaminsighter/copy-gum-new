@@ -249,13 +249,15 @@ impl ClipboardMonitor {
         use crate::content_detector::ContentType;
 
         match content_type {
-            ContentType::Color => "color",      // Hex colors → color category
-            ContentType::Url => "links",        // URLs → links category
-            ContentType::Email => "email",      // Emails → email category
-            ContentType::Phone => "phone",      // Phone numbers → phone category
-            ContentType::Number => "number",    // Numbers → number category
-            ContentType::Code => "code",        // Code → code category
-            ContentType::Text => "text",        // Default → text category
+            ContentType::Password => "password",  // Passwords → password category
+            ContentType::ApiKey => "apikey",      // API keys → apikey category
+            ContentType::Color => "color",        // Hex colors → color category
+            ContentType::Url => "links",          // URLs → links category
+            ContentType::Email => "email",        // Emails → email category
+            ContentType::Phone => "phone",        // Phone numbers → phone category
+            ContentType::Number => "number",      // Numbers → number category
+            ContentType::Code => "code",          // Code → code category
+            ContentType::Text => "text",          // Default → text category
         }
     }
 

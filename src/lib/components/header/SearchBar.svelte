@@ -170,7 +170,7 @@
   }
 
   .search-icon-btn.expanded {
-    width: 300px;
+    width: min(300px, 40vw);
     border-radius: 10px;
     justify-content: flex-start;
     padding-left: 12px;

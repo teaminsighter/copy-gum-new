@@ -76,7 +76,10 @@ export const filteredItems = derived(
     if ($search) {
       const query = $search.toLowerCase();
       filtered = filtered.filter(item =>
-        item.content.toLowerCase().includes(query)
+        item.content.toLowerCase().includes(query) ||
+        (item.app_name && item.app_name.toLowerCase().includes(query)) ||
+        (item.category && item.category.toLowerCase().includes(query)) ||
+        (item.content_type && item.content_type.toLowerCase().includes(query))
       );
     }
 
@@ -145,7 +148,7 @@ async function processQueue() {
   // Batch process all items
   const processedContent = new Set<string>();
   let hasNewItems = false;
-  const updatedItemIds = new Set<number>();
+  const updatedItemData = new Map<number, { contentType: string; category: string }>();
 
   while (state.processingQueue.length > 0) {
     const event = state.processingQueue.shift()!;
@@ -190,8 +193,11 @@ async function processQueue() {
       if (result.isNew) {
         hasNewItems = true;
       } else {
-        // Track updated items so we can update their timestamp in memory
-        updatedItemIds.add(result.id);
+        // Track updated items with their new detection data
+        updatedItemData.set(result.id, {
+          contentType: event.contentType,
+          category: event.category
+        });
       }
 
       processedContent.add(uniqueKey);
@@ -210,14 +216,19 @@ async function processQueue() {
   if (hasNewItems) {
     // New items added - full reload from database
     await loadClipboardItems();
-  } else if (updatedItemIds.size > 0) {
-    // Only duplicates updated - update their timestamps and re-sort WITHOUT DB reload
+  } else if (updatedItemData.size > 0) {
+    // Duplicates updated - update timestamps, category, and content_type in memory
     const now = Date.now();
     clipboardItems.update(items => {
-      // Update timestamps for items that were re-copied
       const updatedItems = items.map(item => {
-        if (updatedItemIds.has(item.id!)) {
-          return { ...item, timestamp: now };
+        const updateInfo = updatedItemData.get(item.id!);
+        if (updateInfo) {
+          return {
+            ...item,
+            timestamp: now,
+            content_type: updateInfo.contentType,
+            category: updateInfo.category
+          };
         }
         return item;
       });

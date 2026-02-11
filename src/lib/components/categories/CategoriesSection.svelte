@@ -68,7 +68,8 @@
   // Update total categories count for navigation
   $: totalCategories.set(categories.length);
 
-  let activeCategory = 'all';
+  // Sync activeCategory with store (so pill highlighting stays correct)
+  $: activeCategory = $selectedCategory || 'all';
   let categoriesContainer: HTMLDivElement;
   let showLeftArrow = false;
   let showRightArrow = false;
@@ -95,7 +96,6 @@
   let momentumAnimation: number | null = null;
 
   function handleCategoryClick(categoryId: string) {
-    activeCategory = categoryId;
     selectedCategory.set(categoryId === 'all' ? null : categoryId);
   }
 

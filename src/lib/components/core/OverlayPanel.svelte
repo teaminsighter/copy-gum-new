@@ -52,7 +52,7 @@
     gap: 12px;
     z-index: 10;
     box-sizing: border-box;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .content-area {

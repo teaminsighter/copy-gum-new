@@ -133,11 +133,15 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
     // Get primary monitor
     if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
         let screen_size = monitor.size();
-        let window_size = window.outer_size().map_err(|e| e.to_string())?;
+        let window_height = 400_u32;
+
+        // Resize window to match screen width
+        window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
+            .map_err(|e| e.to_string())?;
 
         // Position at bottom of screen, full width
         let x = 0;
-        let y = screen_size.height as i32 - window_size.height as i32;
+        let y = screen_size.height as i32 - window_height as i32;
 
         window
             .set_position(PhysicalPosition::new(x, y))

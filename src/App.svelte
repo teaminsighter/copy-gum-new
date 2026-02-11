@@ -370,7 +370,7 @@
     align-items: center;
     gap: 8px;
     margin-left: auto;
-    flex-shrink: 0;
+    flex-shrink: 1;
     overflow: visible;
     position: relative;
   }

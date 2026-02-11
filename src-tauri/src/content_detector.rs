@@ -7,6 +7,8 @@ use std::sync::OnceLock;
 /// Content type identifier
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentType {
+    Password,   // Strong passwords (mixed case + numbers + special chars)
+    ApiKey,     // API keys (sk-xxx, AKIA-xxx, long tokens)
     Color,      // Hex color codes (#RRGGBB, #RGB)
     Url,        // URLs (http://, https://, www.)
     Email,      // Email addresses
@@ -20,6 +22,8 @@ impl ContentType {
     /// Convert ContentType enum to string for database storage
     pub fn as_str(&self) -> &'static str {
         match self {
+            ContentType::Password => "password",
+            ContentType::ApiKey => "apikey",
             ContentType::Color => "color",
             ContentType::Url => "links",
             ContentType::Email => "email",
@@ -33,6 +37,8 @@ impl ContentType {
 
 // Lazy-initialized regex patterns (compiled once, reused many times)
 static HEX_COLOR_REGEX: OnceLock<Regex> = OnceLock::new();
+static API_KEY_REGEX: OnceLock<Regex> = OnceLock::new();
+static PASSWORD_REGEX: OnceLock<Regex> = OnceLock::new();
 static URL_REGEX: OnceLock<Regex> = OnceLock::new();
 static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
 static PHONE_REGEX: OnceLock<Regex> = OnceLock::new();
@@ -46,9 +52,20 @@ fn init_regexes() {
         Regex::new(r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$").unwrap()
     });
 
-    // URL: http://, https://, www., or common TLDs
+    // API keys: sk-xxx, pk-xxx, AKIA-xxx, ghp_xxx, xoxb-xxx, key-xxx,
+    // or long alphanumeric tokens (32+ chars with mixed case/digits)
+    API_KEY_REGEX.get_or_init(|| {
+        Regex::new(r"(?i)^(sk[-_]|pk[-_]|AKIA|ghp_|gho_|xox[baprs]-|key[-_]|token[-_]|api[-_]?key|bearer\s+|secret[-_]|access[-_]?key).+|^[A-Za-z0-9/+=]{32,}$").unwrap()
+    });
+
+    // Passwords: basic pattern - no whitespace, 8-64 chars (actual validation done in code)
+    PASSWORD_REGEX.get_or_init(|| {
+        Regex::new(r"^[^\s]{8,64}$").unwrap()
+    });
+
+    // URL: http://, https://, ftp://, file://, www., or common TLDs
     URL_REGEX.get_or_init(|| {
-        Regex::new(r"^(https?://|www\.)[^\s]+|^[^\s]+\.(com|org|net|edu|gov|io|co|app|dev|tech|ai|me|info|biz)(/[^\s]*)?$").unwrap()
+        Regex::new(r"^(https?://|ftp://|file://|www\.)[^\s]+|^[^\s]+\.(com|org|net|edu|gov|io|co|app|dev|tech|ai|me|info|biz|cc|tv|us|uk|ca|au|de|fr|jp|cn|in|br|ru|nl|se|no|fi|dk|pl|cz|pt|es|it)(/[^\s]*)?$").unwrap()
     });
 
     // Email: basic email pattern
@@ -68,20 +85,22 @@ fn init_regexes() {
 
     // Code: contains common programming patterns
     CODE_REGEX.get_or_init(|| {
-        Regex::new(r"(function\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|class\s+\w+|def\s+\w+|import\s+|export\s+|return\s+|public\s+|private\s+|protected\s+|\{[^}]*\}|;$|\=\>|\:\:)").unwrap()
+        Regex::new(r"(function\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|class\s+\w+|def\s+\w+|import\s+|export\s+|return\s+|public\s+|private\s+|protected\s+|fn\s+\w+|struct\s+\w+|enum\s+\w+|impl\s+|use\s+\w+|func\s+\w+|package\s+|SELECT\s+|INSERT\s+|UPDATE\s+|DELETE\s+|CREATE\s+|if\s*\(|for\s*\(|while\s*\(|\{[^}]*\}|;$|\=\>|\:\:|\->|#include|#define|<\?php|<script|<style|\$\(|npm\s+|pip\s+|cargo\s+|brew\s+)").unwrap()
     });
 }
 
 /// Detect the content type of the given text
 ///
 /// Detection order (priority):
-/// 1. Hex Color (#RRGGBB)
-/// 2. Email (contains @) - checked before URL to avoid TLD false positives
-/// 3. URL (http://, https://, www.)
-/// 4. Phone (phone number patterns)
-/// 5. Number (pure digits)
-/// 6. Code (programming patterns)
-/// 7. Text (default fallback)
+/// 1. Hex Color (#RRGGBB) - most specific
+/// 2. API Key (sk-xxx, AKIA-xxx, long tokens) - before URL since keys can look like URLs
+/// 3. Email (contains @) - checked before URL to avoid TLD false positives
+/// 4. URL (http://, https://, ftp://, file://, www.)
+/// 5. Phone (phone number patterns)
+/// 6. Password (mixed case + digits + special chars) - after phone to avoid false matches
+/// 7. Number (pure digits)
+/// 8. Code (programming patterns)
+/// 9. Text (default fallback)
 pub fn detect_content_type(content: &str) -> ContentType {
     // Initialize regex patterns (only happens once)
     init_regexes();
@@ -101,42 +120,63 @@ pub fn detect_content_type(content: &str) -> ContentType {
         }
     }
 
-    // 2. Check for email (before URL to avoid false positives with .co, .io TLDs)
+    // 2. Check for API key (before URL - keys can contain URL-like strings)
+    if let Some(regex) = API_KEY_REGEX.get() {
+        if regex.is_match(trimmed) {
+            return ContentType::ApiKey;
+        }
+    }
+
+    // 3. Check for email (before URL to avoid false positives with .co, .io TLDs)
     if let Some(regex) = EMAIL_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Email;
         }
     }
 
-    // 3. Check for URL
+    // 4. Check for URL
     if let Some(regex) = URL_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Url;
         }
     }
 
-    // 4. Check for phone number
+    // 5. Check for phone number
     if let Some(regex) = PHONE_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Phone;
         }
     }
 
-    // 5. Check for number (after phone to avoid false positives)
+    // 6. Check for password (after phone - phone numbers shouldn't match)
+    // Requires: 8-64 chars, no whitespace, has uppercase + lowercase + digit + special char
+    if let Some(regex) = PASSWORD_REGEX.get() {
+        if regex.is_match(trimmed) {
+            let has_lower = trimmed.chars().any(|c| c.is_ascii_lowercase());
+            let has_upper = trimmed.chars().any(|c| c.is_ascii_uppercase());
+            let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
+            let has_special = trimmed.chars().any(|c| "!@#$%^&*()_+-=[]{}|;':\"\\,.<>/?`~".contains(c));
+            if has_lower && has_upper && has_digit && has_special {
+                return ContentType::Password;
+            }
+        }
+    }
+
+    // 7. Check for number (after phone to avoid false positives)
     if let Some(regex) = NUMBER_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Number;
         }
     }
 
-    // 6. Check for code (multiline or contains programming keywords)
+    // 8. Check for code (multiline or contains programming keywords)
     if let Some(regex) = CODE_REGEX.get() {
         if regex.is_match(trimmed) {
             return ContentType::Code;
         }
     }
 
-    // 7. Default to text
+    // 9. Default to text
     ContentType::Text
 }
 
@@ -215,6 +255,38 @@ mod tests {
     }
 
     #[test]
+    fn test_api_key_detection() {
+        // Valid API keys
+        assert_eq!(detect_content_type("sk-proj-abc123def456"), ContentType::ApiKey);
+        assert_eq!(detect_content_type("sk-1234567890abcdef"), ContentType::ApiKey);
+        assert_eq!(detect_content_type("pk-live-abcdef123456"), ContentType::ApiKey);
+        assert_eq!(detect_content_type("ghp_abcdefghijklmnop1234"), ContentType::ApiKey);
+        assert_eq!(detect_content_type("xoxb-123-456-abcdef"), ContentType::ApiKey);
+        assert_eq!(detect_content_type("AKIAxxxxxxxxxxxxxxxx"), ContentType::ApiKey);
+
+        // Long alphanumeric tokens (32+ chars)
+        assert_eq!(detect_content_type("abcdefghijklmnopqrstuvwxyz123456"), ContentType::ApiKey);
+
+        // Not API keys
+        assert_ne!(detect_content_type("Hello World"), ContentType::ApiKey);
+        assert_ne!(detect_content_type("short"), ContentType::ApiKey);
+    }
+
+    #[test]
+    fn test_password_detection() {
+        // Valid passwords (mixed case + digits + special chars, 8+ chars)
+        assert_eq!(detect_content_type("P@ssw0rd!2024"), ContentType::Password);
+        assert_eq!(detect_content_type("MyStr0ng!Pass"), ContentType::Password);
+        assert_eq!(detect_content_type("Abc123!@#"), ContentType::Password);
+
+        // Not passwords
+        assert_ne!(detect_content_type("password"), ContentType::Password); // No uppercase, digit, special
+        assert_ne!(detect_content_type("12345678"), ContentType::Password); // No letters or special
+        assert_ne!(detect_content_type("Hello World!1"), ContentType::Password); // Contains space
+        assert_ne!(detect_content_type("Ab1!"), ContentType::Password); // Too short
+    }
+
+    #[test]
     fn test_code_detection() {
         // Valid code patterns
         assert_eq!(detect_content_type("function test() { return 42; }"), ContentType::Code);
@@ -224,6 +296,13 @@ mod tests {
         assert_eq!(detect_content_type("def my_function():"), ContentType::Code);
         assert_eq!(detect_content_type("import React from 'react';"), ContentType::Code);
         assert_eq!(detect_content_type("public static void main()"), ContentType::Code);
+        // New patterns
+        assert_eq!(detect_content_type("fn main() {"), ContentType::Code);
+        assert_eq!(detect_content_type("struct MyStruct {"), ContentType::Code);
+        assert_eq!(detect_content_type("SELECT * FROM users"), ContentType::Code);
+        assert_eq!(detect_content_type("#include <stdio.h>"), ContentType::Code);
+        assert_eq!(detect_content_type("cargo build"), ContentType::Code);
+        assert_eq!(detect_content_type("npm install express"), ContentType::Code);
 
         // Not code
         assert_ne!(detect_content_type("This is plain text"), ContentType::Code);
@@ -243,7 +322,14 @@ mod tests {
         // Hex color has highest priority
         assert_eq!(detect_content_type("#123"), ContentType::Color);
 
-        // URL before email before phone before number
-        // (This is ensured by the detection order in detect_content_type)
+        // API key detected before URL
+        assert_eq!(detect_content_type("sk-proj-abc123def456"), ContentType::ApiKey);
+
+        // Email detected before URL
+        assert_eq!(detect_content_type("user@example.com"), ContentType::Email);
+
+        // URL detection
+        assert_eq!(detect_content_type("https://github.com"), ContentType::Url);
+        assert_eq!(detect_content_type("ftp://files.example.com"), ContentType::Url);
     }
 }
