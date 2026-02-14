@@ -73,12 +73,19 @@ jobs:
         run: npm ci
 
       - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
+        run: npm run tauri build -- --bundles msi,nsis
+
+      - name: List built files
+        run: |
+          dir src-tauri\target\release\bundle\msi\
+          dir src-tauri\target\release\bundle\nsis\
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          files: |
+            src-tauri/target/release/bundle/msi/CopyGum_1.0.0_x64_en-US.msi
+            src-tauri/target/release/bundle/nsis/CopyGum_1.0.0_x64-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: 'CopyGum v__VERSION__'
-          releaseBody: 'Download the installer for your platform below.'
-          releaseDraft: false
-          prerelease: false
