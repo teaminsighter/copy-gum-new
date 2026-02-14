@@ -37,13 +37,20 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:; font-src 'self'",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**/*"]
+        "scope": [
+          "**/*",
+          "$APPDATA/**/*",
+          "$LOCALAPPDATA/**/*",
+          "$HOME/**/*",
+          "C:/**/*",
+          "D:/**/*"
+        ]
       }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "app"],
+    "targets": ["dmg", "app", "msi", "nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -52,7 +59,7 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
-    "shortDescription": "Modern clipboard manager for macOS",
+    "shortDescription": "Modern clipboard manager",
     "longDescription": "CopyGum is a powerful clipboard manager that helps you organize and access your clipboard history with a beautiful overlay interface. Features include smart content detection, categories, tags, and global keyboard shortcuts.",
     "copyright": "Copyright 2024 CopyGum",
     "windows": {

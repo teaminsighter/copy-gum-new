@@ -133,19 +133,61 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
     // Get primary monitor
     if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
         let screen_size = monitor.size();
+        let monitor_position = monitor.position();
         let window_height = 400_u32;
 
-        // Resize window to match screen width
-        window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
-            .map_err(|e| e.to_string())?;
+        // On Windows, we need to account for the taskbar
+        // Use the full screen width but position above the taskbar
+        #[cfg(target_os = "windows")]
+        {
+            use windows::Win32::UI::WindowsAndMessaging::{
+                SystemParametersInfoW, SPI_GETWORKAREA, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+            };
+            use windows::Win32::Foundation::RECT;
 
-        // Position at bottom of screen, full width
-        let x = 0;
-        let y = screen_size.height as i32 - window_height as i32;
+            let mut work_area = RECT::default();
+            unsafe {
+                let _ = SystemParametersInfoW(
+                    SPI_GETWORKAREA,
+                    0,
+                    Some(&mut work_area as *mut _ as *mut std::ffi::c_void),
+                    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+                );
+            }
 
-        window
-            .set_position(PhysicalPosition::new(x, y))
-            .map_err(|e| e.to_string())?;
+            let work_width = (work_area.right - work_area.left) as u32;
+            let work_height = (work_area.bottom - work_area.top) as u32;
+
+            // Resize window to match work area width
+            window.set_size(tauri::PhysicalSize::new(work_width, window_height))
+                .map_err(|e| e.to_string())?;
+
+            // Position at bottom of work area (above taskbar)
+            let x = work_area.left;
+            let y = work_area.bottom - window_height as i32;
+
+            window
+                .set_position(PhysicalPosition::new(x, y))
+                .map_err(|e| e.to_string())?;
+
+            println!("[CopyGum] Window positioned at ({}, {}) with size {}x{}", x, y, work_width, window_height);
+        }
+
+        // On macOS and other platforms, use full screen
+        #[cfg(not(target_os = "windows"))]
+        {
+            // Resize window to match screen width
+            window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
+                .map_err(|e| e.to_string())?;
+
+            // Position at bottom of screen, full width
+            let x = monitor_position.x;
+            let y = monitor_position.y + screen_size.height as i32 - window_height as i32;
+
+            window
+                .set_position(PhysicalPosition::new(x, y))
+                .map_err(|e| e.to_string())?;
+        }
     }
 
     Ok(())

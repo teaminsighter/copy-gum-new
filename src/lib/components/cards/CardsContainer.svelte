@@ -89,8 +89,12 @@
     if (!imagePath) {
       return '';
     }
+    // Normalize Windows paths (convert backslashes to forward slashes)
+    // This helps with the asset protocol on Windows
+    const normalizedPath = imagePath.replace(/\\/g, '/');
     // Convert local file path to Tauri asset URL
-    const url = convertFileSrc(imagePath);
+    const url = convertFileSrc(normalizedPath);
+    console.log('[CopyGum] Image URL:', imagePath, '->', url);
     return url;
   }
 
