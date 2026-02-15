@@ -140,6 +140,34 @@ fn extract_dominant_color(img: &DynamicImage) -> Option<String> {
     Some(format!("#{:02X}{:02X}{:02X}", r_avg, g_avg, b_avg))
 }
 
+/// Read image file and return as base64 data URL
+/// This bypasses asset protocol issues on Windows
+#[tauri::command]
+pub fn get_image_base64(image_path: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let path = Path::new(&image_path);
+
+    if !path.exists() {
+        return Err(format!("Image file not found: {}", image_path));
+    }
+
+    let data = fs::read(path)
+        .map_err(|e| format!("Failed to read image: {}", e))?;
+
+    // Determine MIME type from extension
+    let mime_type = match path.extension().and_then(|e| e.to_str()) {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => "image/png",
+    };
+
+    let base64_data = STANDARD.encode(&data);
+    Ok(format!("data:{};base64,{}", mime_type, base64_data))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

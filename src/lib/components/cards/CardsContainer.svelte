@@ -19,7 +19,7 @@
     switchToCards
   } from '../../stores/navigationStore';
   import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-  import { invoke, convertFileSrc } from '@tauri-apps/api/core';
+  import { invoke } from '@tauri-apps/api/core';
   import { showSuccess, showError } from '../../stores/toastStore';
   import {
     filteredItems,
@@ -84,18 +84,46 @@
     };
   }
 
-  // Helper to convert local file paths to Tauri asset URLs
+  // Cache for image data URLs (path -> base64 data URL)
+  let imageCache: Map<string, string> = new Map();
+  let loadingImages: Set<string> = new Set();
+
+  // Load image as base64 via Tauri command (works on all platforms)
+  async function loadImageBase64(imagePath: string): Promise<void> {
+    if (!imagePath || imageCache.has(imagePath) || loadingImages.has(imagePath)) {
+      return;
+    }
+
+    loadingImages.add(imagePath);
+
+    try {
+      const dataUrl = await invoke<string>('get_image_base64', { imagePath });
+      imageCache.set(imagePath, dataUrl);
+      // Trigger reactivity
+      imageCache = imageCache;
+    } catch (e) {
+      console.error('[CopyGum] Failed to load image:', imagePath, e);
+    } finally {
+      loadingImages.delete(imagePath);
+    }
+  }
+
+  // Get cached image URL or trigger load
   function getImageUrl(imagePath: string | undefined): string {
     if (!imagePath) {
       return '';
     }
-    // Normalize Windows paths (convert backslashes to forward slashes)
-    // This helps with the asset protocol on Windows
-    const normalizedPath = imagePath.replace(/\\/g, '/');
-    // Convert local file path to Tauri asset URL
-    const url = convertFileSrc(normalizedPath);
-    console.log('[CopyGum] Image URL:', imagePath, '->', url);
-    return url;
+
+    // Return cached data URL if available
+    if (imageCache.has(imagePath)) {
+      return imageCache.get(imagePath) || '';
+    }
+
+    // Trigger async load
+    loadImageBase64(imagePath);
+
+    // Return empty while loading
+    return '';
   }
 
   // Helper to format file size

@@ -41,6 +41,7 @@ fn main() {
             export::read_import_file,
             export::get_export_stats,
             app_icons::get_app_icon_data,
+            image_handler::get_image_base64,
         ])
         .manage(clipboard_monitor::ClipboardMonitor::new())
         .setup(|app| {

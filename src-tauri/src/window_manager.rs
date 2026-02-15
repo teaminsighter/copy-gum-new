@@ -134,7 +134,16 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
     if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
         let screen_size = monitor.size();
         let monitor_position = monitor.position();
-        let window_height = 400_u32;
+
+        // Responsive height based on screen height
+        // Small screens (<900): 280px, Medium (900-1200): 340px, Large (>1200): 400px
+        let window_height = if screen_size.height < 900 {
+            280_u32
+        } else if screen_size.height < 1200 {
+            340_u32
+        } else {
+            400_u32
+        };
 
         // On Windows, we need to account for the taskbar
         // Use the full screen width but position above the taskbar
