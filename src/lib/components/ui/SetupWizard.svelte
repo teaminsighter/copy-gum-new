@@ -55,24 +55,32 @@
 {#if show}
   <div class="wizard-backdrop" transition:fade={{ duration: 150 }}>
     <div class="wizard-container" transition:scale={{ duration: 150, start: 0.95 }}>
-      <!-- Close button -->
-      <button class="close-btn" on:click={skipSetup} title="Skip setup">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
+      <!-- Navigation at TOP (so it's above the Dock) -->
+      <div class="wizard-nav">
+        {#if currentStep > 0}
+          <button class="nav-btn secondary" on:click={prevStep}>Back</button>
+        {:else}
+          <button class="nav-btn text" on:click={skipSetup}>Skip</button>
+        {/if}
 
-      <!-- Progress dots -->
-      <div class="wizard-progress">
-        {#each steps as step, i}
-          <button
-            class="progress-dot"
-            class:active={i === currentStep}
-            class:completed={i < currentStep}
-            on:click={() => currentStep = i}
-            aria-label="Go to {step.title} step"
-          ></button>
-        {/each}
+        <!-- Progress dots in center -->
+        <div class="wizard-progress">
+          {#each steps as step, i}
+            <button
+              class="progress-dot"
+              class:active={i === currentStep}
+              class:completed={i < currentStep}
+              on:click={() => currentStep = i}
+              aria-label="Go to {step.title} step"
+            ></button>
+          {/each}
+        </div>
+
+        {#if currentStep < steps.length - 1}
+          <button class="nav-btn primary" on:click={nextStep}>Next</button>
+        {:else}
+          <button class="nav-btn primary" on:click={completeSetup}>Get Started</button>
+        {/if}
       </div>
 
       <!-- Content -->
@@ -119,21 +127,6 @@
           </div>
         {/if}
       </div>
-
-      <!-- Navigation -->
-      <div class="wizard-nav">
-        {#if currentStep > 0}
-          <button class="nav-btn secondary" on:click={prevStep}>Back</button>
-        {:else}
-          <button class="nav-btn text" on:click={skipSetup}>Skip</button>
-        {/if}
-
-        {#if currentStep < steps.length - 1}
-          <button class="nav-btn primary" on:click={nextStep}>Next</button>
-        {:else}
-          <button class="nav-btn primary" on:click={completeSetup}>Get Started</button>
-        {/if}
-      </div>
     </div>
   </div>
 {/if}
@@ -159,37 +152,24 @@
     border: 1px solid rgba(247, 228, 121, 0.3);
     border-radius: 16px;
     width: 340px;
-    padding: 24px;
+    padding: 20px 24px 24px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   }
 
-  .close-btn {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
-    border: none;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 6px;
-    color: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
+  /* Navigation at TOP */
+  .wizard-nav {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .wizard-progress {
     display: flex;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 20px;
   }
 
   .progress-dot {
@@ -213,7 +193,7 @@
   }
 
   .wizard-content {
-    min-height: 160px;
+    min-height: 180px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -283,22 +263,15 @@
     color: rgba(255, 255, 255, 0.7);
   }
 
-  .wizard-nav {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
   .nav-btn {
-    padding: 10px 20px;
+    padding: 8px 16px;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     border: none;
+    min-width: 70px;
   }
 
   .nav-btn.primary {
@@ -323,7 +296,6 @@
   .nav-btn.text {
     background: transparent;
     color: rgba(255, 255, 255, 0.5);
-    padding: 10px 12px;
   }
 
   .nav-btn.text:hover {

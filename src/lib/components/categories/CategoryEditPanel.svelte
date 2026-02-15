@@ -184,11 +184,9 @@
 <style>
   /* Reference: preview.html lines 1515-1543 */
   .edit-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     width: 288px;
-    max-height: 380px;
+    max-height: 320px;
     background: rgba(20, 20, 20, 0.98);
     border-radius: 12px;
     backdrop-filter: blur(20px);
@@ -201,8 +199,6 @@
     opacity: 0;
     transform: scale(0.95);
     transition: opacity 0.2s ease-out, transform 0.2s ease-out;
-    pointer-events: none;
-    visibility: hidden;
   }
 
   .edit-panel.show {

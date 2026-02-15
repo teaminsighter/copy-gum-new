@@ -1115,10 +1115,10 @@
   /* Container */
   .settings-dropdown {
     position: fixed;
-    top: calc(100vh - 480px + 80px);
+    top: 80px;
     right: 20px;
     width: 360px;
-    max-height: calc(100vh - (100vh - 480px + 80px) - 20px);
+    max-height: calc(100vh - 100px);
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(247, 228, 121, 0.3);

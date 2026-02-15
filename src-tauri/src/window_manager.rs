@@ -129,21 +129,90 @@ pub fn hide_window(app: AppHandle) -> Result<(), String> {
     }
 }
 
+/// Show window and fully activate it (for setup wizard, first-run experience)
+/// Unlike toggle_window, this activates the app to ensure user can interact
+#[allow(deprecated)]
+#[tauri::command]
+pub fn show_window_activated(app: AppHandle) -> Result<(), String> {
+    println!("[CopyGum] show_window_activated called (first run)");
+
+    if let Some(window) = app.get_webview_window("main") {
+        // Position window at bottom of screen
+        position_window_right(&window)?;
+
+        // Show window
+        window.show().map_err(|e| e.to_string())?;
+        window.set_always_on_top(true).map_err(|e| e.to_string())?;
+
+        #[cfg(target_os = "macos")]
+        {
+            use objc::msg_send;
+            use objc::sel;
+            use objc::sel_impl;
+
+            if let Ok(ns_win_ptr) = window.ns_window() {
+                unsafe {
+                    let ns_win = ns_win_ptr as id;
+
+                    // Set overlay window level
+                    let _: () = msg_send![ns_win, setLevel: OVERLAY_WINDOW_LEVEL];
+
+                    // Collection behavior
+                    let behavior = NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
+                        | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary
+                        | NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                        | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
+                    ns_win.setCollectionBehavior_(behavior);
+
+                    let _: () = msg_send![ns_win, setHidesOnDeactivate: NO];
+
+                    // For first run: ACTIVATE the app and make window key+main
+                    // This ensures user can click on setup wizard
+                    let _: () = msg_send![ns_win, makeKeyAndOrderFront: cocoa::base::nil];
+
+                    println!("[CopyGum] Window shown and activated for first run");
+                }
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use windows::Win32::Foundation::HWND;
+            use windows::Win32::UI::WindowsAndMessaging::{
+                SetWindowPos, SetForegroundWindow,
+                HWND_TOPMOST, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+            };
+
+            if let Ok(hwnd) = window.hwnd() {
+                unsafe {
+                    let hwnd = HWND(hwnd.0 as *mut std::ffi::c_void);
+                    let _ = SetWindowPos(
+                        hwnd,
+                        HWND_TOPMOST,
+                        0, 0, 0, 0,
+                        SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW,
+                    );
+                    let _ = SetForegroundWindow(hwnd);
+                }
+            }
+            let _ = window.set_focus();
+        }
+
+        Ok(())
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
 fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
     // Get primary monitor
     if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
         let screen_size = monitor.size();
         let monitor_position = monitor.position();
 
-        // Responsive height based on screen height
-        // Small screens (<900): 280px, Medium (900-1200): 340px, Large (>1200): 400px
-        let window_height = if screen_size.height < 900 {
-            280_u32
-        } else if screen_size.height < 1200 {
-            340_u32
-        } else {
-            400_u32
-        };
+        // Fixed height of 400px for consistent design
+        // Original responsive heights caused layout issues with settings panel
+        let window_height = 400_u32;
 
         // On Windows, we need to account for the taskbar
         // Use the full screen width but position above the taskbar

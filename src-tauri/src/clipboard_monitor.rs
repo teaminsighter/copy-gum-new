@@ -408,22 +408,40 @@ pub async fn copy_image_to_clipboard(image_path: String) -> Result<(), String> {
     use image::ImageReader;
     use std::path::Path;
 
+    println!("[CopyGum] copy_image_to_clipboard called with path: {}", image_path);
+
     // Verify the file exists
     let path = Path::new(&image_path);
     if !path.exists() {
-        return Err(format!("Image file not found: {}", image_path));
+        let err = format!("Image file not found: {}", image_path);
+        println!("[CopyGum] Error: {}", err);
+        return Err(err);
     }
+
+    println!("[CopyGum] Image file exists, loading...");
 
     // Load the image
     let img = ImageReader::open(path)
-        .map_err(|e| format!("Failed to open image file: {}", e))?
+        .map_err(|e| {
+            let err = format!("Failed to open image file: {}", e);
+            println!("[CopyGum] Error: {}", err);
+            err
+        })?
         .decode()
-        .map_err(|e| format!("Failed to decode image: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Failed to decode image: {}", e);
+            println!("[CopyGum] Error: {}", err);
+            err
+        })?;
+
+    println!("[CopyGum] Image decoded successfully");
 
     // Convert to RGBA8
     let rgba_img = img.to_rgba8();
     let (width, height) = rgba_img.dimensions();
     let pixels = rgba_img.into_raw();
+
+    println!("[CopyGum] Creating clipboard image data ({}x{}, {} bytes)", width, height, pixels.len());
 
     // Create arboard ImageData
     let image_data = arboard::ImageData {
@@ -433,11 +451,22 @@ pub async fn copy_image_to_clipboard(image_path: String) -> Result<(), String> {
     };
 
     // Write to clipboard
+    println!("[CopyGum] Accessing clipboard...");
     let mut clipboard = Clipboard::new()
-        .map_err(|e| format!("Failed to access clipboard: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Failed to access clipboard: {}", e);
+            println!("[CopyGum] Error: {}", err);
+            err
+        })?;
 
+    println!("[CopyGum] Setting image to clipboard...");
     clipboard.set_image(image_data)
-        .map_err(|e| format!("Failed to copy image to clipboard: {}", e))?;
+        .map_err(|e| {
+            let err = format!("Failed to set clipboard image: {}", e);
+            println!("[CopyGum] Error: {}", err);
+            err
+        })?;
 
+    println!("[CopyGum] Image copied to clipboard successfully!");
     Ok(())
 }

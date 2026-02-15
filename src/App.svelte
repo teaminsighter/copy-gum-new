@@ -193,10 +193,16 @@
     // Initialize clipboard store (single initialization point)
     await initClipboardStore();
 
-    // Show setup wizard on first run
+    // Show setup wizard on first run and auto-show window with activation
     const currentSettings = $settings;
     if (!currentSettings.hasShownOverlayInfo) {
       showSetupWizard = true;
+      // Auto-show and ACTIVATE window on first launch so user can click setup wizard
+      try {
+        await invoke('show_window_activated');
+      } catch (err) {
+        console.error('Failed to show window for setup wizard:', err);
+      }
     }
   });
 
@@ -377,18 +383,18 @@
 
   /* Global Edit Panel Container */
   .global-edit-panel {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
+    position: fixed;
+    top: 80px;
+    right: 20px;
     width: 288px;
-    max-height: 380px;
+    max-height: calc(100vh - 100px);
     z-index: 10000;
-    pointer-events: none;
   }
 
   .global-edit-panel :global(.edit-panel) {
-    pointer-events: auto;
+    position: relative;
+    top: auto;
+    left: auto;
   }
 
   /* Settings Dropdown Wrapper */

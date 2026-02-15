@@ -166,9 +166,11 @@
         });
       }, 200);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to copy to clipboard:', err);
-      showError('Failed to copy to clipboard');
+      // Show actual error message for debugging
+      const errorMsg = err?.message || err?.toString() || 'Unknown error';
+      showError(`Copy failed: ${errorMsg}`);
       isCopying = false;
     }
   }

@@ -34,6 +34,7 @@ fn main() {
             clipboard_monitor::copy_image_to_clipboard,
             window_manager::toggle_window,
             window_manager::hide_window,
+            window_manager::show_window_activated,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings,

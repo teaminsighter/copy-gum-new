@@ -5,7 +5,7 @@
   export let visible: boolean = false;
 </script>
 
-<div class="overlay-panel" class:visible>
+<div class="overlay-panel visible">
   <div class="panel-header">
     <slot name="header" />
   </div>
@@ -19,21 +19,21 @@
   /* Reference: preview.html lines 31-43 */
   .overlay-panel {
     position: fixed;
-    bottom: -400px;
+    top: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     width: 100%;
     max-width: 100vw;
-    height: 400px;
+    height: 100vh;
     background: #0a0a0a;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
     overflow: visible;
     box-sizing: border-box;
-    transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .overlay-panel.visible {
-    bottom: 0;
+    /* Always visible since window controls visibility */
   }
 
   /* Reference: preview.html lines 45-60 */

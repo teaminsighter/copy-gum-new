@@ -36,7 +36,8 @@ mod tests {
     #[test]
     fn test_init_database() {
         let migrations = init_database();
-        assert_eq!(migrations.len(), 1);
+        assert_eq!(migrations.len(), 2);
         assert_eq!(migrations[0].version, 1);
+        assert_eq!(migrations[1].version, 2);
     }
 }
