@@ -251,8 +251,78 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             println!("[CopyGum] Window positioned at ({}, {}) with size {}x{}", x, y, work_width, window_height);
         }
 
-        // On macOS and other platforms, use full screen
-        #[cfg(not(target_os = "windows"))]
+        // On macOS, use visible frame (excludes menu bar and Dock)
+        #[cfg(target_os = "macos")]
+        {
+            use objc::msg_send;
+            use objc::sel;
+            use objc::sel_impl;
+            use objc::runtime::Object;
+
+            // Get the main screen's visible frame (work area excluding Dock and menu bar)
+            let ns_screen: *mut Object = unsafe { msg_send![objc::class!(NSScreen), mainScreen] };
+
+            if !ns_screen.is_null() {
+                // visibleFrame returns NSRect in screen coordinates
+                // On macOS, origin is bottom-left of screen
+                #[repr(C)]
+                #[derive(Debug, Copy, Clone)]
+                struct NSPoint { x: f64, y: f64 }
+                #[repr(C)]
+                #[derive(Debug, Copy, Clone)]
+                struct NSSize { width: f64, height: f64 }
+                #[repr(C)]
+                #[derive(Debug, Copy, Clone)]
+                struct NSRect { origin: NSPoint, size: NSSize }
+
+                let visible_frame: NSRect = unsafe { msg_send![ns_screen, visibleFrame] };
+                let screen_frame: NSRect = unsafe { msg_send![ns_screen, frame] };
+
+                // Get scale factor for proper positioning
+                let scale_factor = window.scale_factor().unwrap_or(1.0);
+
+                // Convert to physical pixels
+                let work_width = (visible_frame.size.width * scale_factor) as u32;
+                let work_x = (visible_frame.origin.x * scale_factor) as i32;
+
+                // macOS coordinates: origin at bottom-left, we need top-left for Tauri
+                // visible_frame.origin.y is distance from bottom of screen to bottom of visible area
+                // screen_frame.size.height is total screen height
+                // We want window at bottom of visible area, so:
+                // top_y = screen_height - visible_frame.origin.y - window_height
+                let screen_height_physical = (screen_frame.size.height * scale_factor) as i32;
+                let visible_origin_y_physical = (visible_frame.origin.y * scale_factor) as i32;
+
+                // Position window at bottom of visible frame (just above the Dock)
+                let y = screen_height_physical - visible_origin_y_physical - window_height as i32;
+
+                window.set_size(tauri::PhysicalSize::new(work_width, window_height))
+                    .map_err(|e| e.to_string())?;
+
+                window
+                    .set_position(PhysicalPosition::new(work_x, y))
+                    .map_err(|e| e.to_string())?;
+
+                println!("[CopyGum] macOS: Window positioned at ({}, {}) with size {}x{}", work_x, y, work_width, window_height);
+                println!("[CopyGum] macOS: visibleFrame origin=({}, {}), size=({}, {})",
+                    visible_frame.origin.x, visible_frame.origin.y,
+                    visible_frame.size.width, visible_frame.size.height);
+            } else {
+                // Fallback to full screen if we can't get NSScreen
+                window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
+                    .map_err(|e| e.to_string())?;
+
+                let x = monitor_position.x;
+                let y = monitor_position.y + screen_size.height as i32 - window_height as i32;
+
+                window
+                    .set_position(PhysicalPosition::new(x, y))
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        // On other platforms (Linux, etc.), use full screen
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         {
             // Resize window to match screen width
             window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
