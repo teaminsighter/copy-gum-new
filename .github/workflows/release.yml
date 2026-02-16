@@ -45,16 +45,20 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ''
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
 
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Create ZIP from app bundle
         run: |
           cd src-tauri/target/${{ matrix.target }}/release/bundle/macos
-          zip -r CopyGum_1.0.0_${{ matrix.arch }}.zip CopyGum.app
+          zip -r CopyGum_${{ steps.version.outputs.VERSION }}_${{ matrix.arch }}.zip CopyGum.app
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: CopyGum-macos-${{ matrix.arch }}
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/CopyGum_1.0.0_${{ matrix.arch }}.zip
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/CopyGum_${{ steps.version.outputs.VERSION }}_${{ matrix.arch }}.zip
 
   build-windows:
     runs-on: windows-latest
@@ -93,6 +97,10 @@ jobs:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -104,17 +112,17 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: CopyGum v1.0.0
+          tag_name: ${{ github.ref_name }}
+          name: CopyGum ${{ github.ref_name }}
           body: |
             ## Downloads
 
             | Platform | File |
             |----------|------|
-            | macOS (Apple Silicon) | `CopyGum_1.0.0_aarch64.zip` |
-            | macOS (Intel) | `CopyGum_1.0.0_x86_64.zip` |
-            | Windows (MSI) | `CopyGum_1.0.0_x64_en-US.msi` |
-            | Windows (Installer) | `CopyGum_1.0.0_x64-setup.exe` |
+            | macOS (Apple Silicon) | `CopyGum_${{ steps.version.outputs.VERSION }}_aarch64.zip` |
+            | macOS (Intel) | `CopyGum_${{ steps.version.outputs.VERSION }}_x86_64.zip` |
+            | Windows (MSI) | `CopyGum_${{ steps.version.outputs.VERSION }}_x64_en-US.msi` |
+            | Windows (Installer) | `CopyGum_${{ steps.version.outputs.VERSION }}_x64-setup.exe` |
 
             ### Installation
             - **macOS**: Unzip and drag CopyGum.app to Applications
@@ -122,6 +130,9 @@ jobs:
 
             ### First Launch
             Press `Cmd+Shift+V` (macOS) or `Ctrl+Shift+V` (Windows) to open CopyGum.
+
+            ### What's New in ${{ github.ref_name }}
+            - Fixed macOS window positioning to properly account for Dock
           draft: false
           prerelease: false
           files: |
