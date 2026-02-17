@@ -288,6 +288,143 @@
       color: var(--text-muted);
     }
 
+    /* Installation Section */
+    .install-section {
+      padding: 60px 0 100px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .install-section h2 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 32px;
+    }
+
+    .install-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 32px;
+    }
+
+    .install-tab {
+      padding: 12px 24px;
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .install-tab:hover {
+      border-color: rgba(247, 228, 121, 0.3);
+    }
+
+    .install-tab.active {
+      background: rgba(247, 228, 121, 0.1);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .install-content {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .install-content.hidden {
+      display: none;
+    }
+
+    .install-step {
+      display: flex;
+      gap: 20px;
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .install-step:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .install-step:first-child {
+      padding-top: 0;
+    }
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: rgba(247, 228, 121, 0.1);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .step-content p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .step-content code {
+      background: rgba(247, 228, 121, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: var(--primary);
+      font-size: 13px;
+    }
+
+    .code-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0d0d12;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .code-block code {
+      flex: 1;
+      background: none;
+      padding: 0;
+      color: var(--primary);
+      font-size: 14px;
+    }
+
+    .copy-btn {
+      padding: 6px 12px;
+      background: rgba(247, 228, 121, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(247, 228, 121, 0.2);
+    }
+
     /* Footer */
     footer {
       padding: 40px 0;
@@ -343,6 +480,7 @@
       </a>
       <nav>
         <a href="#features">Features</a>
+        <a href="#install">Install</a>
         <a href="https://github.com/teaminsighter/copy-gum-new" target="_blank">GitHub</a>
       </nav>
     </header>
@@ -358,7 +496,7 @@
           </svg>
           <div>
             <div>Download for Windows</div>
-            <div class="size">v1.0.0 - MSI Installer</div>
+            <div class="size">v1.0.1 - EXE Installer</div>
           </div>
         </a>
         <a href="#" class="download-btn secondary" id="download-macos">
@@ -367,12 +505,12 @@
           </svg>
           <div>
             <div>Download for macOS</div>
-            <div class="size">v1.0.0 - DMG Installer</div>
+            <div class="size">v1.0.1 - Apple Silicon</div>
           </div>
         </a>
       </div>
 
-      <p class="version-info">Version 1.0.0 | Free &amp; Open Source</p>
+      <p class="version-info">Version 1.0.1 | Free &amp; Open Source</p>
 
       <div class="screenshot">
         <div class="screenshot-placeholder">
@@ -429,6 +567,71 @@
       <p>Press the shortcut anywhere to open CopyGum as an overlay</p>
     </section>
 
+    <section class="install-section" id="install">
+      <h2>Installation Guide</h2>
+      <div class="install-tabs">
+        <button class="install-tab active" data-tab="macos">macOS</button>
+        <button class="install-tab" data-tab="windows">Windows</button>
+      </div>
+      <div class="install-content" id="macos-install">
+        <div class="install-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Download & Extract</h4>
+            <p>Download the ZIP file and extract it to find <code>CopyGum.app</code></p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>Move to Applications</h4>
+            <p>Drag <code>CopyGum.app</code> to your Applications folder</p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Remove Quarantine (Required)</h4>
+            <p>Since the app isn't signed with an Apple Developer certificate, run this command in Terminal:</p>
+            <div class="code-block">
+              <code>xattr -cr /Applications/CopyGum.app</code>
+              <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h4>Grant Accessibility Permission</h4>
+            <p>When prompted, allow CopyGum in System Settings &gt; Privacy &amp; Security &gt; Accessibility</p>
+          </div>
+        </div>
+      </div>
+      <div class="install-content hidden" id="windows-install">
+        <div class="install-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h4>Download Installer</h4>
+            <p>Download the EXE installer and run it</p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h4>SmartScreen Warning</h4>
+            <p>If Windows shows a SmartScreen warning, click "More info" then "Run anyway"</p>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h4>Complete Installation</h4>
+            <p>Follow the installer prompts. CopyGum will be ready to use!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <footer>
       <p>Made with care by <a href="https://github.com/teaminsighter" target="_blank">Team Insighter</a> | <a href="https://github.com/teaminsighter/copy-gum-new" target="_blank">View on GitHub</a></p>
     </footer>
@@ -441,7 +644,7 @@
       document.getElementById('modifier-key').textContent = 'Cmd';
     }
 
-    // Download links (update these when releases are available)
+    // Download links
     const windowsDownload = document.getElementById('download-windows');
     const macosDownload = document.getElementById('download-macos');
 
@@ -449,7 +652,7 @@
     const releasesBase = 'https://github.com/teaminsighter/copy-gum-new/releases/latest/download/';
 
     windowsDownload.href = releasesBase + 'CopyGum_1.0.0_x64-setup.exe';
-    macosDownload.href = releasesBase + 'CopyGum_1.0.0_aarch64.dmg';
+    macosDownload.href = releasesBase + 'CopyGum_1.0.1_aarch64.zip';
 
     // Auto-detect OS and highlight appropriate button
     if (isMac) {
@@ -457,6 +660,34 @@
       macosDownload.classList.add('primary');
       windowsDownload.classList.remove('primary');
       windowsDownload.classList.add('secondary');
+    }
+
+    // Installation tabs
+    const tabs = document.querySelectorAll('.install-tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Update active tab
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        // Show corresponding content
+        const tabName = tab.dataset.tab;
+        document.querySelectorAll('.install-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        document.getElementById(tabName + '-install').classList.remove('hidden');
+      });
+    });
+
+    // Copy code function
+    function copyCode(btn) {
+      const code = btn.previousElementSibling.textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+        }, 2000);
+      });
     }
   </script>
 </body>
