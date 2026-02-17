@@ -119,7 +119,7 @@ export const filteredItems = derived(
     if ($filters.dateRange) {
       const { start, end } = $filters.dateRange;
       filtered = filtered.filter(item => {
-        const itemDate = new Date(item.created_at);
+        const itemDate = new Date(item.created_at ?? item.timestamp);
         return itemDate >= start && itemDate <= end;
       });
     }

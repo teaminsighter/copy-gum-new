@@ -4,7 +4,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import Database from '@tauri-apps/plugin-sql';
-import type { ClipboardItem } from '../stores/clipboardStore';
+import type { ClipboardItem } from './database';
 
 export interface ExportData {
   version: string;

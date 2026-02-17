@@ -1,6 +1,6 @@
 // Global store for tag management
 import { writable, get } from 'svelte/store';
-import { getTags, createTag as dbCreateTag, updateTag as dbUpdateTag, deleteTag as dbDeleteTag, type Tag as DBTag } from '../services/database';
+import { getTags, createTag as dbCreateTag, updateTag as dbUpdateTag, deleteTag as dbDeleteTag } from '../services/database';
 import { broadcast, createTagRenamedEvent } from '../events/eventBus';
 
 export interface Tag {

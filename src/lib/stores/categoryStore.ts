@@ -50,6 +50,7 @@ export interface CustomCategory {
   id: string;
   name: string;
   icon: string;
+  color?: string;
   isCustom: boolean;
 }
 
@@ -153,7 +154,7 @@ export async function createCustomCategory(name: string, icon: string = '📁', 
 
   try {
     // Save to database first
-    const dbCategory = await dbCreateCustomCategory(trimmedName, icon, color);
+    await dbCreateCustomCategory(trimmedName, icon, color);
 
     // Use the category name as the ID (this matches the database schema)
     const newCategory: CustomCategory = {
@@ -241,12 +242,13 @@ export async function updateCustomCategory(categoryId: string, updates: Partial<
 
     // Broadcast rename event if name changed
     if (updates.name && updates.name !== oldCategory.name) {
-      const event = createCategoryRenamedEvent(categoryId, oldCategory.name, updates.name);
+      const newName = updates.name;
+      const event = createCategoryRenamedEvent(categoryId, oldCategory.name, newName);
       broadcast(event);
 
       // Also update category order to use new name
       categoryOrder.update(order =>
-        order.map(id => id === categoryId ? updates.name : id)
+        order.map(id => id === categoryId ? newName : id)
       );
     }
   } catch (error) {

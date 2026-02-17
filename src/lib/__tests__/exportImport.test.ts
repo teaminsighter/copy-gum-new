@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getExportSizeEstimate, validateImportedItems } from '../utils/exportImport';
+import type { ClipboardItem } from '../services/database';
 
 describe('exportImport utilities', () => {
   describe('getExportSizeEstimate', () => {
@@ -20,9 +21,12 @@ describe('exportImport utilities', () => {
         category: 'text',
         is_pinned: false,
         is_favorite: false,
-        created_at: new Date().toISOString(),
-        tags: [],
-      }));
+        is_image: false,
+        is_deleted: false,
+        timestamp: Date.now(),
+        created_at: Date.now(),
+        tags: '',
+      })) as ClipboardItem[];
 
       const estimate = getExportSizeEstimate(items);
       expect(estimate).toMatch(/KB$/);
@@ -37,9 +41,12 @@ describe('exportImport utilities', () => {
         category: 'text',
         is_pinned: false,
         is_favorite: false,
-        created_at: new Date().toISOString(),
-        tags: [],
-      }));
+        is_image: false,
+        is_deleted: false,
+        timestamp: Date.now(),
+        created_at: Date.now(),
+        tags: '',
+      })) as ClipboardItem[];
 
       const estimate = getExportSizeEstimate(items);
       expect(estimate).toMatch(/MB$/);
@@ -50,7 +57,12 @@ describe('exportImport utilities', () => {
         id: i,
         content: 'x'.repeat(100),
         content_type: 'text',
-      }));
+        category: 'text',
+        is_pinned: false,
+        is_image: false,
+        is_deleted: false,
+        timestamp: Date.now(),
+      })) as ClipboardItem[];
 
       const estimate = getExportSizeEstimate(items);
       // Should match pattern like "12.34 KB" or "1.23 MB"

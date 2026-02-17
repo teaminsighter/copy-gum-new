@@ -1,11 +1,9 @@
 <script lang="ts">
   // Main Overlay Panel Container
   // Reference: preview.html lines 31-43, 2014-2657
-
-  export let visible: boolean = false;
 </script>
 
-<div class="overlay-panel visible">
+<div class="overlay-panel">
   <div class="panel-header">
     <slot name="header" />
   </div>
@@ -32,9 +30,6 @@
     box-sizing: border-box;
   }
 
-  .overlay-panel.visible {
-    /* Always visible since window controls visibility */
-  }
 
   /* Reference: preview.html lines 45-60 */
   .panel-header {

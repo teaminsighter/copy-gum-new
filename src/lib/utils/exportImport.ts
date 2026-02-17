@@ -83,7 +83,7 @@ export async function exportToCSV(items: ClipboardItem[]): Promise<void> {
         item.is_pinned ? 'true' : 'false',
         item.is_favorite ? 'true' : 'false',
         item.created_at || '',
-        `"${(item.tags || []).join(', ')}"` // Tags as comma-separated
+        `"${Array.isArray(item.tags) ? item.tags.join(', ') : (item.tags || '')}"` // Tags as comma-separated
       ];
     });
 

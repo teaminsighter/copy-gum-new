@@ -161,7 +161,7 @@ export async function saveClipboardItem(
  */
 export async function saveImageClipboardItem(
   imagePath: string,
-  thumbnailPath: string,
+  _thumbnailPath: string,
   imageWidth: number,
   imageHeight: number,
   imageSize: number,
