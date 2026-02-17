@@ -10,6 +10,7 @@ mod settings;
 mod export;
 mod app_detector;
 mod app_icons;
+mod updater;
 
 fn main() {
     tauri::Builder::default()
@@ -23,6 +24,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             // Database operations now handled in frontend via @tauri-apps/plugin-sql
             // Keeping only clipboard monitoring, window management, and settings commands
@@ -43,6 +45,9 @@ fn main() {
             export::get_export_stats,
             app_icons::get_app_icon_data,
             image_handler::get_image_base64,
+            updater::check_for_update,
+            updater::install_update,
+            updater::get_current_version,
         ])
         .manage(clipboard_monitor::ClipboardMonitor::new())
         .setup(|app| {

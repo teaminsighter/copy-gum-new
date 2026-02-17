@@ -7,6 +7,18 @@
   import { get } from 'svelte/store';
   import { exportToJSON, exportToCSV, importFromJSON, clearAllHistory } from '../../services/exportService';
   import { filteredItems } from '../../stores/clipboardStore';
+  import { invoke } from '@tauri-apps/api/core';
+
+  // Update state
+  let currentVersion = '1.0.0';
+  let isCheckingUpdate = false;
+  let updateAvailable = false;
+  let updateVersion = '';
+  let updateNotes = '';
+  let isInstallingUpdate = false;
+
+  // Get current version on mount
+  invoke<string>('get_current_version').then(v => currentVersion = v).catch(() => {});
 
   export let show: boolean = false;
 
@@ -166,6 +178,54 @@
     } catch (e) {
       showError('Failed to reset settings');
       console.error(e);
+    }
+  }
+
+  // Update handlers
+  interface UpdateInfo {
+    available: boolean;
+    version: string | null;
+    notes: string | null;
+    date: string | null;
+  }
+
+  async function handleCheckForUpdate() {
+    if (isCheckingUpdate) return;
+
+    try {
+      isCheckingUpdate = true;
+      const info = await invoke<UpdateInfo>('check_for_update');
+
+      if (info.available && info.version) {
+        updateAvailable = true;
+        updateVersion = info.version;
+        updateNotes = info.notes || '';
+        showSuccess(`Update v${info.version} available!`);
+      } else {
+        updateAvailable = false;
+        showSuccess('You are running the latest version');
+      }
+    } catch (e) {
+      console.error('Update check failed:', e);
+      showError('Failed to check for updates');
+    } finally {
+      isCheckingUpdate = false;
+    }
+  }
+
+  async function handleInstallUpdate() {
+    if (isInstallingUpdate) return;
+
+    try {
+      isInstallingUpdate = true;
+      showSuccess('Downloading update...');
+      await invoke('install_update');
+      showSuccess('Update installed! Restart to apply.');
+    } catch (e) {
+      console.error('Update install failed:', e);
+      showError('Failed to install update');
+    } finally {
+      isInstallingUpdate = false;
     }
   }
 
@@ -1092,17 +1152,42 @@
       <div class="settings-section">
         <div class="about-section">
           <div class="about-logo">CopyGum</div>
-          <div class="about-version">Version 1.0.0</div>
+          <div class="about-version">Version {currentVersion}</div>
           <div class="about-description">
             A modern clipboard manager<br/>
             built with Tauri + Svelte
           </div>
+
+          <!-- Update Section -->
+          <div class="update-section">
+            {#if updateAvailable}
+              <div class="update-available">
+                <span class="update-badge">v{updateVersion} available</span>
+                <button
+                  class="update-btn install"
+                  on:click={handleInstallUpdate}
+                  disabled={isInstallingUpdate}
+                >
+                  {isInstallingUpdate ? 'Installing...' : 'Install Update'}
+                </button>
+              </div>
+            {:else}
+              <button
+                class="update-btn check"
+                on:click={handleCheckForUpdate}
+                disabled={isCheckingUpdate}
+              >
+                {isCheckingUpdate ? 'Checking...' : 'Check for Updates'}
+              </button>
+            {/if}
+          </div>
+
           <div class="about-links">
-            <span class="about-link">Website</span>
+            <a href="https://copy-gum-landing-page.vercel.app" target="_blank" class="about-link">Website</a>
             <span class="about-divider">•</span>
-            <span class="about-link">GitHub</span>
+            <a href="https://github.com/teaminsighter/copy-gum-new" target="_blank" class="about-link">GitHub</a>
             <span class="about-divider">•</span>
-            <span class="about-link">Support</span>
+            <a href="https://github.com/teaminsighter/copy-gum-new/issues" target="_blank" class="about-link">Support</a>
           </div>
         </div>
       </div>
@@ -1557,7 +1642,62 @@
     font-size: 13px;
     color: rgba(255, 255, 255, 0.7);
     line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .update-section {
     margin-bottom: 20px;
+  }
+
+  .update-available {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .update-badge {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .update-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .update-btn.check {
+    background: rgba(247, 228, 121, 0.15);
+    color: #f7e479;
+    border: 1px solid rgba(247, 228, 121, 0.3);
+  }
+
+  .update-btn.check:hover:not(:disabled) {
+    background: rgba(247, 228, 121, 0.25);
+    border-color: #f7e479;
+  }
+
+  .update-btn.install {
+    background: #4caf50;
+    color: white;
+  }
+
+  .update-btn.install:hover:not(:disabled) {
+    background: #43a047;
+  }
+
+  .update-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .about-links {
