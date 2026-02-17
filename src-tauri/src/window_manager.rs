@@ -210,11 +210,7 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
         let screen_size = monitor.size();
         let monitor_position = monitor.position();
 
-        // Fixed height of 400px for consistent design
-        // Original responsive heights caused layout issues with settings panel
-        let window_height = 400_u32;
-
-        // On Windows, we need to account for the taskbar
+        // On Windows, we need to account for the taskbar and DPI scaling
         // Use the full screen width but position above the taskbar
         #[cfg(target_os = "windows")]
         {
@@ -235,6 +231,15 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
 
             let work_width = (work_area.right - work_area.left) as u32;
             let work_height = (work_area.bottom - work_area.top) as u32;
+            let scale_factor = window.scale_factor().unwrap_or(1.0);
+
+            // Dynamic height: 38% of work area height, min 300px, max 500px
+            // This accounts for different screen sizes and DPI scaling
+            let base_height = (work_height as f64 * 0.38) as u32;
+            let window_height = base_height.clamp(300, 500);
+
+            println!("[CopyGum] Windows: work_area={}x{}, scale={}, base_height={}, final_height={}",
+                work_width, work_height, scale_factor, base_height, window_height);
 
             // Resize window to match work area width
             window.set_size(tauri::PhysicalSize::new(work_width, window_height))
@@ -293,6 +298,12 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
 
                 let screen_width = (screen_frame.size.width * scale_factor) as u32;
                 let screen_height = (screen_frame.size.height * scale_factor) as i32;
+                let visible_height = (visible_frame.size.height * scale_factor) as i32;
+
+                // Dynamic height: 38% of visible height, min 300px, max 500px
+                // This accounts for different screen sizes
+                let base_height = (visible_height as f64 * 0.38) as u32;
+                let window_height = base_height.clamp(300, 500);
 
                 // Dock at bottom: visible_frame.origin.y > 0
                 // Dock at left: visible_frame.origin.x > 0
@@ -332,13 +343,16 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                     "above Dock"
                 };
 
-                println!("[CopyGum] macOS: screen={}x{}, dock_autohide={}, dock_position={}",
+                println!("[CopyGum] macOS: screen={}x{}, visible_height={}, dock_autohide={}, dock_position={}",
                     screen_frame.size.width, screen_frame.size.height,
-                    dock_autohide, dock_position);
+                    visible_height, dock_autohide, dock_position);
                 println!("[CopyGum] macOS: Window at (0, {}) size {}x{} - {}",
                     y, screen_width, window_height, position_type);
             } else {
-                // Fallback positioning
+                // Fallback positioning - use 38% of screen height
+                let base_height = (screen_size.height as f64 * 0.38) as u32;
+                let window_height = base_height.clamp(300, 500);
+
                 window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
                     .map_err(|e| e.to_string())?;
 
@@ -349,13 +363,17 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                     .set_position(PhysicalPosition::new(x, y))
                     .map_err(|e| e.to_string())?;
 
-                println!("[CopyGum] macOS: Fallback positioning at ({}, {})", x, y);
+                println!("[CopyGum] macOS: Fallback positioning at ({}, {}) size {}x{}", x, y, screen_size.width, window_height);
             }
         }
 
-        // On other platforms (Linux, etc.), use full screen
+        // On other platforms (Linux, etc.), use dynamic height
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         {
+            // Dynamic height: 38% of screen height, min 300px, max 500px
+            let base_height = (screen_size.height as f64 * 0.38) as u32;
+            let window_height = base_height.clamp(300, 500);
+
             // Resize window to match screen width
             window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
                 .map_err(|e| e.to_string())?;
@@ -367,6 +385,8 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             window
                 .set_position(PhysicalPosition::new(x, y))
                 .map_err(|e| e.to_string())?;
+
+            println!("[CopyGum] Linux: Window at ({}, {}) size {}x{}", x, y, screen_size.width, window_height);
         }
     }
 
