@@ -40,6 +40,7 @@
     endDragging,
     DRAG_THRESHOLD
   } from '../../stores/dragStore';
+  import { writable } from 'svelte/store';
 
   // Subscribe to clipboard store
   $: items = $filteredItems;
@@ -84,13 +85,16 @@
     };
   }
 
-  // Cache for image data URLs (path -> base64 data URL)
-  let imageCache: Map<string, string> = new Map();
+  // Cache for image data URLs (path -> base64 data URL) - using Svelte store for reactivity
+  const imageCache = writable<Map<string, string>>(new Map());
   let loadingImages: Set<string> = new Set();
 
   // Load image as base64 via Tauri command (works on all platforms)
   async function loadImageBase64(imagePath: string): Promise<void> {
-    if (!imagePath || imageCache.has(imagePath) || loadingImages.has(imagePath)) {
+    let currentCache: Map<string, string>;
+    imageCache.subscribe(c => currentCache = c)();
+
+    if (!imagePath || currentCache.has(imagePath) || loadingImages.has(imagePath)) {
       return;
     }
 
@@ -98,9 +102,11 @@
 
     try {
       const dataUrl = await invoke<string>('get_image_base64', { imagePath });
-      imageCache.set(imagePath, dataUrl);
-      // Trigger reactivity
-      imageCache = imageCache;
+      // Update store - this triggers reactivity
+      imageCache.update(cache => {
+        cache.set(imagePath, dataUrl);
+        return new Map(cache); // Return new Map to ensure reactivity
+      });
     } catch (e) {
       console.error('[CopyGum] Failed to load image:', imagePath, e);
     } finally {
@@ -108,18 +114,18 @@
     }
   }
 
-  // Get cached image URL or trigger load
-  function getImageUrl(imagePath: string | undefined): string {
+  // Reactive getter for image URL from cache
+  function getImageUrlFromCache(cache: Map<string, string>, imagePath: string | undefined): string {
     if (!imagePath) {
       return '';
     }
 
     // Return cached data URL if available
-    if (imageCache.has(imagePath)) {
-      return imageCache.get(imagePath) || '';
+    if (cache.has(imagePath)) {
+      return cache.get(imagePath) || '';
     }
 
-    // Trigger async load
+    // Trigger async load (won't block)
     loadImageBase64(imagePath);
 
     // Return empty while loading
@@ -554,7 +560,7 @@
         customBg={item.category === 'image' ? (item.image_dominant_color || '') : ''}
         isLightBg={item.category === 'color' ? isLightColor(item.content) : false}
         isSelected={$selectedCardIndex === index}
-        imageUrl={getImageUrl(item.image_path)}
+        imageUrl={getImageUrlFromCache($imageCache, item.image_path)}
         imagePath={item.image_path || ''}
         imageSize={formatImageSize(item.image_width, item.image_height)}
         fileSize={formatFileSize(item.image_size)}
