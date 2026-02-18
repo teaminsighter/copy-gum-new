@@ -233,10 +233,9 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             let work_height = (work_area.bottom - work_area.top) as u32;
             let scale_factor = window.scale_factor().unwrap_or(1.0);
 
-            // Dynamic height: 45% of work area height, min 350px, max 500px
-            // Higher percentage ensures cards have enough space on smaller screens
-            let base_height = (work_height as f64 * 0.45) as u32;
-            let window_height = base_height.clamp(350, 500);
+            // Dynamic height: 35% of work area height, min 350px, max 450px
+            let base_height = (work_height as f64 * 0.35) as u32;
+            let window_height = base_height.clamp(350, 450);
 
             println!("[CopyGum] Windows: work_area={}x{}, scale={}, base_height={}, final_height={}",
                 work_width, work_height, scale_factor, base_height, window_height);
@@ -300,10 +299,9 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                 let screen_height = (screen_frame.size.height * scale_factor) as i32;
                 let visible_height = (visible_frame.size.height * scale_factor) as i32;
 
-                // Dynamic height: 45% of visible height, min 350px, max 500px
-                // Higher percentage ensures cards have enough space on smaller screens
-                let base_height = (visible_height as f64 * 0.45) as u32;
-                let window_height = base_height.clamp(350, 500);
+                // Dynamic height: 35% of visible height, min 350px, max 450px
+                let base_height = (visible_height as f64 * 0.35) as u32;
+                let window_height = base_height.clamp(350, 450);
 
                 // Dock at bottom: visible_frame.origin.y > 0
                 // Dock at left: visible_frame.origin.x > 0
@@ -349,9 +347,9 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                 println!("[CopyGum] macOS: Window at (0, {}) size {}x{} - {}",
                     y, screen_width, window_height, position_type);
             } else {
-                // Fallback positioning - use 45% of screen height
-                let base_height = (screen_size.height as f64 * 0.45) as u32;
-                let window_height = base_height.clamp(350, 500);
+                // Fallback positioning - use 35% of screen height
+                let base_height = (screen_size.height as f64 * 0.35) as u32;
+                let window_height = base_height.clamp(350, 450);
 
                 window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
                     .map_err(|e| e.to_string())?;
@@ -370,9 +368,9 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
         // On other platforms (Linux, etc.), use dynamic height
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         {
-            // Dynamic height: 45% of screen height, min 350px, max 500px
-            let base_height = (screen_size.height as f64 * 0.45) as u32;
-            let window_height = base_height.clamp(350, 500);
+            // Dynamic height: 35% of screen height, min 350px, max 450px
+            let base_height = (screen_size.height as f64 * 0.35) as u32;
+            let window_height = base_height.clamp(350, 450);
 
             // Resize window to match screen width
             window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
