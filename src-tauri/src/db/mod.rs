@@ -21,6 +21,13 @@ pub fn init_database() -> Vec<Migration> {
             sql: "ALTER TABLE clipboard_items ADD COLUMN app_bundle_id TEXT;",
             kind: MigrationKind::Up,
         },
+        // Migration 3: Add app_exe_path column for Windows icon extraction
+        Migration {
+            version: 3,
+            description: "add_app_exe_path_column",
+            sql: "ALTER TABLE clipboard_items ADD COLUMN app_exe_path TEXT;",
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -36,8 +43,9 @@ mod tests {
     #[test]
     fn test_init_database() {
         let migrations = init_database();
-        assert_eq!(migrations.len(), 2);
+        assert_eq!(migrations.len(), 3);
         assert_eq!(migrations[0].version, 1);
         assert_eq!(migrations[1].version, 2);
+        assert_eq!(migrations[2].version, 3);
     }
 }

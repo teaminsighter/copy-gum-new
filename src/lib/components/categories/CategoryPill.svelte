@@ -96,9 +96,9 @@
   }
 
   .category-pill:hover .glass-overlay {
-    border: 1.5px solid rgba(247, 228, 121, 0.7);
-    box-shadow: 0 0 6px rgba(247, 228, 121, 0.2),
-                inset 0 0 5px rgba(247, 228, 121, 0.05);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.10) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 
   .category-pill .glass-filter,
@@ -112,20 +112,20 @@
 
   .category-pill .glass-filter {
     z-index: 0;
-    backdrop-filter: blur(6px);
-    filter: url(#lensFilter) saturate(115%) brightness(1.1);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
   }
 
   .category-pill .glass-overlay {
     z-index: 1;
-    background: rgba(50, 50, 50, 0.6);
-    border: 1px solid rgba(90, 90, 90, 0.3);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   }
 
   .category-pill .glass-specular {
     z-index: 2;
-    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.15),
-                inset 0 0 10px rgba(255, 255, 255, 0.05);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.02) 40%, transparent 100%);
   }
 
   .category-pill .glass-content {
@@ -138,9 +138,9 @@
     height: 100%;
     font-size: 13px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.88);
     transition: padding 0.2s ease, color 0.2s ease, text-shadow 0.2s ease;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     pointer-events: none;
   }
 
@@ -150,9 +150,10 @@
   }
 
   .category-pill.active .glass-overlay {
-    background: linear-gradient(135deg, rgba(247, 228, 121, 0.3) 0%, rgba(247, 228, 121, 0.4) 100%);
-    border-color: rgba(247, 228, 121, 0.8);
-    box-shadow: 0 2px 6px rgba(247, 228, 121, 0.2);
+    background: linear-gradient(135deg, rgba(247, 228, 121, 0.18) 0%, rgba(247, 228, 121, 0.10) 100%);
+    border: 1px solid rgba(247, 228, 121, 0.5);
+    box-shadow: 0 4px 20px rgba(247, 228, 121, 0.15),
+                inset 0 0 0 0.5px rgba(247, 228, 121, 0.2);
   }
 
   .category-pill.active .glass-content {

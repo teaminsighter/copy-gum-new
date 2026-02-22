@@ -24,7 +24,7 @@
     width: 100%;
     max-width: 100vw;
     height: 100vh;
-    background: #0a0a0a;
+    background: var(--panel-bg-color, #0a0a0a);
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
     overflow: visible;
     box-sizing: border-box;

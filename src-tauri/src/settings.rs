@@ -23,6 +23,10 @@ fn default_has_shown_overlay_info() -> bool {
     false
 }
 
+fn default_panel_bg_color() -> String {
+    "#0a0a0a".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     // General
@@ -37,7 +41,7 @@ pub struct AppSettings {
     pub max_image_size_mb: i32,
 
     // Appearance
-    pub theme: String,  // "light", "dark", "auto", "high-contrast", "nord", "dracula", "solarized"
+    pub theme: String,  // "dark" (single dark theme)
     pub card_size: String,  // "small", "medium", "large"
     pub font_size: i32,  // 12, 14, 16, 18
     pub show_thumbnails: bool,
@@ -49,6 +53,8 @@ pub struct AppSettings {
     pub window_opacity: i32,  // 0-100, default 95
     #[serde(default = "default_blur")]
     pub enable_blur: bool,  // Enable blur effect
+    #[serde(default = "default_panel_bg_color")]
+    pub panel_bg_color: String,  // Panel background color (default: #0a0a0a)
 
     // Shortcuts
     pub toggle_window_shortcut: String,
@@ -87,6 +93,7 @@ impl Default for AppSettings {
             accent_color: None,
             window_opacity: 100,
             enable_blur: false,
+            panel_bg_color: "#0a0a0a".to_string(),
 
             // Shortcuts defaults
             toggle_window_shortcut: "CommandOrControl+Shift+V".to_string(),

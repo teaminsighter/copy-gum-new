@@ -175,7 +175,8 @@ async function processQueue() {
           event.dominantColor || null,
           event.sourceAppName,
           event.sourceAppIcon,
-          event.sourceBundleId
+          event.sourceBundleId,
+          event.sourceExePath
         );
       } else {
         // Save text item
@@ -185,7 +186,8 @@ async function processQueue() {
           event.category,
           event.sourceAppName,
           event.sourceAppIcon,
-          event.sourceBundleId
+          event.sourceBundleId,
+          event.sourceExePath
         );
       }
 
@@ -288,6 +290,7 @@ interface ClipboardQueueItem {
   sourceAppName?: string;
   sourceAppIcon?: string;
   sourceBundleId?: string;
+  sourceExePath?: string;
   // Image-specific fields
   isImage: boolean;
   imagePath?: string;
@@ -366,6 +369,7 @@ export async function startClipboardMonitoring(): Promise<void> {
       sourceAppName?: string;
       sourceAppIcon?: string;
       sourceBundleId?: string;
+      sourceExePath?: string;
     }>('clipboard-changed', async (event) => {
       const currentState = getMonitorState();
 
@@ -390,6 +394,7 @@ export async function startClipboardMonitoring(): Promise<void> {
         sourceAppName: event.payload.sourceAppName,
         sourceAppIcon: event.payload.sourceAppIcon,
         sourceBundleId: event.payload.sourceBundleId,
+        sourceExePath: event.payload.sourceExePath,
         isImage: event.payload.isImage,
         imagePath: event.payload.imagePath,
         thumbnailPath: event.payload.thumbnailPath,

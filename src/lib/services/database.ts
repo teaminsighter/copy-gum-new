@@ -11,6 +11,7 @@ export interface ClipboardItem {
   app_name?: string;
   app_icon?: string;
   app_bundle_id?: string;
+  app_exe_path?: string;
   is_image: boolean;
   image_path?: string;
   image_thumbnail?: Uint8Array;
@@ -109,7 +110,8 @@ export async function saveClipboardItem(
   category: string,
   appName?: string,
   appIcon?: string,
-  appBundleId?: string
+  appBundleId?: string,
+  appExePath?: string
 ): Promise<{ id: number; isNew: boolean }> {
   try {
     const database = await getDb();
@@ -143,9 +145,9 @@ export async function saveClipboardItem(
 
     const result = await database.execute(
       `INSERT INTO clipboard_items
-       (content, content_type, category, app_name, app_icon, app_bundle_id, is_image, timestamp, is_pinned, is_deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, 0, $7, 0, 0)`,
-      [content, contentType, category, appName || null, appIcon || null, appBundleId || null, timestamp]
+       (content, content_type, category, app_name, app_icon, app_bundle_id, app_exe_path, is_image, timestamp, is_pinned, is_deleted)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, 0, 0)`,
+      [content, contentType, category, appName || null, appIcon || null, appBundleId || null, appExePath || null, timestamp]
     );
 
     const newId = result.lastInsertId || 0;
@@ -168,7 +170,8 @@ export async function saveImageClipboardItem(
   dominantColor: string | null,
   appName?: string,
   appIcon?: string,
-  appBundleId?: string
+  appBundleId?: string,
+  appExePath?: string
 ): Promise<{ id: number; isNew: boolean }> {
   try {
     const database = await getDb();
@@ -196,15 +199,15 @@ export async function saveImageClipboardItem(
       return { id: existingId, isNew: false };
     }
 
-    // Create filename from path for display
-    const filename = imagePath.split('/').pop() || 'Image';
+    // Create filename from path for display (handle both / and \ separators)
+    const filename = imagePath.split(/[/\\]/).pop() || 'Image';
 
     const result = await database.execute(
       `INSERT INTO clipboard_items
-       (content, content_type, category, app_name, app_icon, app_bundle_id, is_image,
+       (content, content_type, category, app_name, app_icon, app_bundle_id, app_exe_path, is_image,
         image_path, image_width, image_height, image_size, image_dominant_color,
         timestamp, is_pinned, is_deleted)
-       VALUES ($1, $2, $3, $4, $5, $6, 1, $7, $8, $9, $10, $11, $12, 0, 0)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9, $10, $11, $12, $13, 0, 0)`,
       [
         filename,           // content - use filename as display text
         'image',            // content_type
@@ -212,6 +215,7 @@ export async function saveImageClipboardItem(
         appName || null,
         appIcon || null,
         appBundleId || null,
+        appExePath || null,
         imagePath,
         imageWidth,
         imageHeight,

@@ -31,6 +31,7 @@
   export let itemId: number; // Database ID for this clipboard item
   export let appIcon: string = '💻';
   export let appBundleId: string | undefined = undefined;
+  export let appExePath: string | undefined = undefined;
   export let appName: string = 'Unknown';
 
   // System icon (fetched from macOS)
@@ -79,8 +80,39 @@
   export let fileSize: string = ''; // For image cards (e.g., "2.4 MB")
   export let showThumbnails: boolean = true; // Whether to show image thumbnails or placeholders
 
+  // Image loading state
+  let imageLoadFailed = false;
+  let imageRetryCount = 0;
+  const MAX_IMAGE_RETRIES = 3;
+
+  // Retry loading image on error (handles file system timing on Windows)
+  function handleImageError(e: Event) {
+    const img = e.target as HTMLImageElement;
+    if (imageRetryCount < MAX_IMAGE_RETRIES) {
+      imageRetryCount++;
+      setTimeout(() => {
+        // Force reload by appending cache-buster
+        const base = imageUrl.split('?')[0];
+        img.src = `${base}?retry=${imageRetryCount}`;
+      }, 300 * imageRetryCount);
+    } else {
+      imageLoadFailed = true;
+    }
+  }
+
+  function handleImageLoad() {
+    imageLoadFailed = false;
+    imageRetryCount = 0;
+  }
+
+  // Reset retry state when imageUrl changes
+  $: if (imageUrl) {
+    imageLoadFailed = false;
+    imageRetryCount = 0;
+  }
+
   // Check if this is an image card (only show as image if thumbnails are enabled)
-  $: isImageCard = category === 'image' && imageUrl && showThumbnails;
+  $: isImageCard = category === 'image' && imageUrl && showThumbnails && !imageLoadFailed;
 
   // Check if this is a color card
   $: isColorCard = category === 'color' && content;
@@ -508,12 +540,13 @@
   onMount(() => {
     window.addEventListener(CLOSE_DROPDOWNS_EVENT, handleCloseDropdowns);
 
-    // Fetch system icon if bundle ID is available
-    if (appBundleId) {
+    // Fetch system icon if bundle ID or exe path is available
+    if (appBundleId || appExePath) {
       iconLoading = true;
       invoke<string>('get_app_icon_data', {
-        bundleId: appBundleId,
-        appName: appName
+        bundleId: appBundleId || null,
+        appName: appName,
+        exePath: appExePath || null
       }).then(iconData => {
         // Check if it's a data URL (system icon) or emoji
         if (iconData.startsWith('data:image/')) {
@@ -643,7 +676,7 @@
       {#if isImageCard}
         <!-- Image Card Content with Thumbnail -->
         <div class="image-preview-container">
-          <img src={imageUrl} alt={content} class="image-preview" />
+          <img src={imageUrl} alt={content} class="image-preview" on:error={handleImageError} on:load={handleImageLoad} />
         </div>
         <div class="image-metadata">
           {content}
@@ -798,9 +831,9 @@
 
   /* Regular cards - hover glow */
   .clipboard-card:not(.has-custom-bg):hover .glass-overlay {
-    border: 1.5px solid rgba(247, 228, 121, 0.8);
-    box-shadow: 0 0 8px rgba(247, 228, 121, 0.25),
-                inset 0 0 8px rgba(247, 228, 121, 0.05);
+    border: 1.5px solid rgba(var(--accent-rgb, 247, 228, 121), 0.8);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb, 247, 228, 121), 0.25),
+                inset 0 0 8px rgba(var(--accent-rgb, 247, 228, 121), 0.05);
   }
 
   /* Color/Image cards - NO glow on hover */
@@ -983,7 +1016,7 @@
     gap: 6px;
     margin-bottom: 20px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    border-bottom: 1px solid rgba(var(--accent-rgb, 247, 228, 121), 0.2);
     overflow: visible;
   }
 
@@ -1073,8 +1106,8 @@
   }
 
   .app-icon .system-icon {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
     border-radius: 4px;
   }
@@ -1275,8 +1308,8 @@
 
   .tag {
     padding: 4px 10px;
-    background: rgba(247, 228, 121, 0.15);
-    border: 1px solid rgba(247, 228, 121, 0.3);
+    background: rgba(var(--accent-rgb, 247, 228, 121), 0.15);
+    border: 1px solid rgba(var(--accent-rgb, 247, 228, 121), 0.3);
     border-radius: 12px;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.95);
@@ -1289,10 +1322,10 @@
   }
 
   .tag:hover {
-    background: rgba(247, 228, 121, 0.25);
+    background: rgba(var(--accent-rgb, 247, 228, 121), 0.25);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-color: rgba(247, 228, 121, 0.5);
+    border-color: rgba(var(--accent-rgb, 247, 228, 121), 0.5);
     transform: scale(1.05);
   }
 
@@ -1316,8 +1349,8 @@
   }
 
   .add-tag-btn button:hover {
-    background: rgba(247, 228, 121, 0.15);
-    border-color: rgba(247, 228, 121, 0.7);
+    background: rgba(var(--accent-rgb, 247, 228, 121), 0.15);
+    border-color: rgba(var(--accent-rgb, 247, 228, 121), 0.7);
     color: rgba(247, 228, 121, 1);
     transform: scale(1.1);
   }

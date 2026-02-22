@@ -96,12 +96,47 @@
     }
   }
 
-  async function handleThemeChange(theme: string) {
+  // Panel background color presets
+  const panelBgPresets = [
+    { name: 'Black', color: '#0a0a0a' },
+    { name: 'Charcoal', color: '#1e1e1e' },
+    { name: 'Midnight', color: '#121218' },
+    { name: 'Deep Blue', color: '#1a237e' },
+    { name: 'Ocean', color: '#0277bd' },
+    { name: 'Teal', color: '#00695c' },
+    { name: 'Forest', color: '#2e7d32' },
+    { name: 'Purple', color: '#6a1b9a' },
+    { name: 'Wine', color: '#880e4f' },
+    { name: 'Crimson', color: '#b71c1c' },
+    { name: 'Burnt Orange', color: '#e65100' },
+    { name: 'Brown', color: '#4e342e' },
+  ];
+
+  // Local hex input for panel BG
+  let panelBgHexInput = $settings.panel_bg_color || '#0a0a0a';
+  $: panelBgHexInput = $settings.panel_bg_color || '#0a0a0a';
+
+  async function handlePanelBgColorChange(color: string) {
     try {
-      await updateSetting('theme', theme);
-      showSuccess('Theme updated');
+      if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+        showError('Invalid color format. Use #RRGGBB');
+        return;
+      }
+      await updateSetting('panel_bg_color', color);
+      panelBgHexInput = color;
     } catch (e) {
-      showError('Failed to update theme');
+      showError('Failed to update panel background');
+      console.error(e);
+    }
+  }
+
+  async function handleResetPanelBgColor() {
+    try {
+      await updateSetting('panel_bg_color', '#0a0a0a');
+      panelBgHexInput = '#0a0a0a';
+      showSuccess('Panel background reset');
+    } catch (e) {
+      showError('Failed to reset panel background');
       console.error(e);
     }
   }
@@ -132,31 +167,6 @@
       showSuccess('Density updated');
     } catch (e) {
       showError('Failed to update density');
-      console.error(e);
-    }
-  }
-
-  async function handleAccentColorChange(color: string) {
-    try {
-      // Validate hex color format
-      if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
-        showError('Invalid color format. Use #RRGGBB');
-        return;
-      }
-      await updateSetting('accent_color', color);
-      showSuccess('Accent color updated');
-    } catch (e) {
-      showError('Failed to update accent color');
-      console.error(e);
-    }
-  }
-
-  async function handleResetAccentColor() {
-    try {
-      await updateSetting('accent_color', undefined);
-      showSuccess('Accent color reset to default');
-    } catch (e) {
-      showError('Failed to reset accent color');
       console.error(e);
     }
   }
@@ -532,93 +542,47 @@
         <div class="settings-section-title">Appearance</div>
 
         <div class="setting-group">
-          <div class="setting-group-label">Theme</div>
-          <div class="setting-group-description">Choose your preferred color scheme</div>
-          <div class="theme-grid">
-            <label class="theme-card" class:active={$settings.theme === 'auto'}>
-              <input
-                type="radio"
-                name="theme"
-                value="auto"
-                checked={$settings.theme === 'auto'}
-                on:change={() => handleThemeChange('auto')}
+          <div class="setting-group-label">Panel Background Color</div>
+          <div class="setting-group-description">Change the overlay panel background</div>
+          <div class="panel-bg-presets">
+            {#each panelBgPresets as preset}
+              <button
+                class="panel-bg-swatch"
+                class:active={$settings.panel_bg_color === preset.color}
+                style="background: {preset.color};"
+                title={preset.name}
+                on:click={() => handlePanelBgColorChange(preset.color)}
                 disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview auto"></div>
-              <span class="theme-name">Auto</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'light'}>
-              <input
-                type="radio"
-                name="theme"
-                value="light"
-                checked={$settings.theme === 'light'}
-                on:change={() => handleThemeChange('light')}
+              ></button>
+            {/each}
+          </div>
+          <div class="color-picker-row" style="margin-top: 10px;">
+            <input
+              type="color"
+              value={$settings.panel_bg_color || '#0a0a0a'}
+              on:change={(e) => handlePanelBgColorChange(e.currentTarget.value)}
+              disabled={$isLoadingSettings}
+              class="color-input"
+            />
+            <input
+              type="text"
+              bind:value={panelBgHexInput}
+              on:change={() => handlePanelBgColorChange(panelBgHexInput)}
+              disabled={$isLoadingSettings}
+              class="color-text-input"
+              placeholder="#0a0a0a"
+              maxlength="7"
+            />
+            {#if $settings.panel_bg_color && $settings.panel_bg_color !== '#0a0a0a'}
+              <button
+                class="reset-color-btn"
+                on:click={handleResetPanelBgColor}
                 disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview light"></div>
-              <span class="theme-name">Light</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'dark'}>
-              <input
-                type="radio"
-                name="theme"
-                value="dark"
-                checked={$settings.theme === 'dark'}
-                on:change={() => handleThemeChange('dark')}
-                disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview dark"></div>
-              <span class="theme-name">Dark</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'high-contrast'}>
-              <input
-                type="radio"
-                name="theme"
-                value="high-contrast"
-                checked={$settings.theme === 'high-contrast'}
-                on:change={() => handleThemeChange('high-contrast')}
-                disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview high-contrast"></div>
-              <span class="theme-name">High Contrast</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'nord'}>
-              <input
-                type="radio"
-                name="theme"
-                value="nord"
-                checked={$settings.theme === 'nord'}
-                on:change={() => handleThemeChange('nord')}
-                disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview nord"></div>
-              <span class="theme-name">Nord</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'dracula'}>
-              <input
-                type="radio"
-                name="theme"
-                value="dracula"
-                checked={$settings.theme === 'dracula'}
-                on:change={() => handleThemeChange('dracula')}
-                disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview dracula"></div>
-              <span class="theme-name">Dracula</span>
-            </label>
-            <label class="theme-card" class:active={$settings.theme === 'solarized'}>
-              <input
-                type="radio"
-                name="theme"
-                value="solarized"
-                checked={$settings.theme === 'solarized'}
-                on:change={() => handleThemeChange('solarized')}
-                disabled={$isLoadingSettings}
-              />
-              <div class="theme-preview solarized"></div>
-              <span class="theme-name">Solarized</span>
-            </label>
+                title="Reset to default"
+              >
+                Reset
+              </button>
+            {/if}
           </div>
         </div>
 
@@ -750,39 +714,6 @@
               />
               <span>Spacious</span>
             </label>
-          </div>
-        </div>
-
-        <div class="setting-group">
-          <div class="setting-group-label">Accent Color</div>
-          <div class="setting-group-description">Customize the highlight color (optional)</div>
-          <div class="color-picker-row">
-            <input
-              type="color"
-              value={$settings.accent_color || '#f7e479'}
-              on:change={(e) => handleAccentColorChange(e.currentTarget.value)}
-              disabled={$isLoadingSettings}
-              class="color-input"
-            />
-            <input
-              type="text"
-              value={$settings.accent_color || '#f7e479'}
-              on:change={(e) => handleAccentColorChange(e.currentTarget.value)}
-              disabled={$isLoadingSettings}
-              class="color-text-input"
-              placeholder="#f7e479"
-              maxlength="7"
-            />
-            {#if $settings.accent_color}
-              <button
-                class="reset-color-btn"
-                on:click={handleResetAccentColor}
-                disabled={$isLoadingSettings}
-                title="Reset to default"
-              >
-                Reset
-              </button>
-            {/if}
           </div>
         </div>
 
@@ -1789,102 +1720,39 @@
     line-height: 1.4;
   }
 
-  /* Theme Grid */
-  .theme-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 12px;
+  /* Panel Background Presets */
+  .panel-bg-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-top: 8px;
   }
 
-  .theme-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+  .panel-bg-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.15);
     cursor: pointer;
     transition: all 0.2s;
+    padding: 0;
   }
 
-  .theme-card input {
-    display: none;
+  .panel-bg-swatch:hover {
+    border-color: rgba(247, 228, 121, 0.5);
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(247, 228, 121, 0.3);
   }
 
-  .theme-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(247, 228, 121, 0.3);
-    transform: translateY(-2px);
+  .panel-bg-swatch.active {
+    border-color: #f7e479;
+    box-shadow: 0 0 12px rgba(247, 228, 121, 0.4);
+    transform: scale(1.1);
   }
 
-  .theme-card.active {
-    background: rgba(247, 228, 121, 0.15);
-    border-color: rgba(247, 228, 121, 0.6);
-    box-shadow: 0 0 16px rgba(247, 228, 121, 0.2);
-  }
-
-  .theme-preview {
-    width: 100%;
-    height: 50px;
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .theme-preview::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 50%;
-    bottom: 0;
-  }
-
-  .theme-preview::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    right: 0;
-    bottom: 0;
-  }
-
-  /* Theme Preview Colors */
-  .theme-preview.auto::before { background: #ffffff; }
-  .theme-preview.auto::after { background: #1a1a1a; }
-
-  .theme-preview.light::before { background: #ffffff; }
-  .theme-preview.light::after { background: #f5f5f5; }
-
-  .theme-preview.dark::before { background: #1a1a1a; }
-  .theme-preview.dark::after { background: #2a2a2a; }
-
-  .theme-preview.high-contrast::before { background: #000000; }
-  .theme-preview.high-contrast::after { background: #00d4ff; }
-
-  .theme-preview.nord::before { background: #2e3440; }
-  .theme-preview.nord::after { background: #88c0d0; }
-
-  .theme-preview.dracula::before { background: #282a36; }
-  .theme-preview.dracula::after { background: #ff79c6; }
-
-  .theme-preview.solarized::before { background: #002b36; }
-  .theme-preview.solarized::after { background: #268bd2; }
-
-  .theme-name {
-    font-size: 12px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
-    text-align: center;
-  }
-
-  .theme-card.active .theme-name {
-    color: #f7e479;
-    font-weight: 600;
+  .panel-bg-swatch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* Color Picker */

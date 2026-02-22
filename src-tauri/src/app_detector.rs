@@ -13,6 +13,7 @@ use objc::{class, msg_send, sel, sel_impl};
 pub struct AppInfo {
     pub name: String,
     pub bundle_id: Option<String>,
+    pub exe_path: Option<String>,
 }
 
 impl Default for AppInfo {
@@ -20,6 +21,7 @@ impl Default for AppInfo {
         AppInfo {
             name: "Unknown".to_string(),
             bundle_id: None,
+            exe_path: None,
         }
     }
 }
@@ -60,6 +62,7 @@ pub fn get_frontmost_app() -> AppInfo {
         AppInfo {
             name: app_name,
             bundle_id: bundle_identifier,
+            exe_path: None,
         }
     }
 }
@@ -69,7 +72,7 @@ pub fn get_frontmost_app() -> AppInfo {
 pub fn get_frontmost_app() -> AppInfo {
     use windows::Win32::Foundation::HWND;
     use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId};
-    use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
+    use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION};
     use windows::Win32::System::ProcessStatus::GetModuleBaseNameW;
 
     unsafe {
@@ -92,24 +95,36 @@ pub fn get_frontmost_app() -> AppInfo {
         let mut process_id: u32 = 0;
         GetWindowThreadProcessId(hwnd, Some(&mut process_id));
 
-        // Get process name
-        let process_name = if process_id != 0 {
+        let mut process_name = String::new();
+        let mut exe_path: Option<String> = None;
+
+        if process_id != 0 {
             if let Ok(handle) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id) {
+                // Get process base name
                 let mut name_buf = [0u16; 256];
                 let len = GetModuleBaseNameW(handle, None, &mut name_buf);
                 if len > 0 {
                     let name = String::from_utf16_lossy(&name_buf[..len as usize]);
                     // Remove .exe extension
-                    name.trim_end_matches(".exe").to_string()
-                } else {
-                    String::new()
+                    process_name = name.trim_end_matches(".exe").to_string();
                 }
-            } else {
-                String::new()
+
+                // Get full exe path for icon extraction
+                let mut path_buf = [0u16; 1024];
+                let mut path_len = path_buf.len() as u32;
+                if QueryFullProcessImageNameW(
+                    handle,
+                    PROCESS_NAME_FORMAT(0),
+                    windows::core::PWSTR(path_buf.as_mut_ptr()),
+                    &mut path_len,
+                ).is_ok() {
+                    let path = String::from_utf16_lossy(&path_buf[..path_len as usize]);
+                    if !path.is_empty() {
+                        exe_path = Some(path);
+                    }
+                }
             }
-        } else {
-            String::new()
-        };
+        }
 
         // Use process name if available, otherwise window title
         let app_name = if !process_name.is_empty() {
@@ -123,6 +138,7 @@ pub fn get_frontmost_app() -> AppInfo {
         AppInfo {
             name: app_name,
             bundle_id: None, // Windows doesn't have bundle IDs
+            exe_path,
         }
     }
 }
@@ -131,6 +147,12 @@ pub fn get_frontmost_app() -> AppInfo {
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn get_frontmost_app() -> AppInfo {
     AppInfo::default()
+}
+
+/// Get the exe path from AppInfo (convenience helper)
+#[allow(dead_code)]
+pub fn get_exe_path(app_info: &AppInfo) -> Option<&str> {
+    app_info.exe_path.as_deref()
 }
 
 /// Convert NSString to Rust String

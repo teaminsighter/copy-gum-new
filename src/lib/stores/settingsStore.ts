@@ -26,6 +26,7 @@ export interface AppSettings {
   accent_color?: string;
   window_opacity: number;
   enable_blur: boolean;
+  panel_bg_color: string;
 
   // Shortcuts
   toggle_window_shortcut: string;
@@ -57,6 +58,7 @@ const defaultSettings: AppSettings = {
   accent_color: undefined,
   window_opacity: 100,
   enable_blur: false,
+  panel_bg_color: '#0a0a0a',
   toggle_window_shortcut: 'CommandOrControl+Shift+V',
   search_shortcut: 'CommandOrControl+F',
   exclude_apps: [],
@@ -175,22 +177,24 @@ function applySettings(appSettings: AppSettings): void {
 
   // Apply blur effect
   applyBlur(appSettings.enable_blur);
+
+  // Apply panel background color
+  applyPanelBgColor(appSettings.panel_bg_color);
 }
 
 /**
- * Apply theme to document
+ * Apply theme to document (always dark)
  */
-function applyTheme(theme: string): void {
-  const root = document.documentElement;
+function applyTheme(_theme: string): void {
+  // Single dark theme - no multi-theme support
+}
 
-  if (theme === 'auto') {
-    // Use system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
-  } else {
-    // Support new theme presets: light, dark, high-contrast, nord, dracula, solarized
-    root.setAttribute('data-theme', theme);
-  }
+/**
+ * Apply panel background color to document
+ */
+function applyPanelBgColor(color: string): void {
+  const root = document.documentElement;
+  root.style.setProperty('--panel-bg-color', color || '#0a0a0a');
 }
 
 /**
@@ -258,13 +262,7 @@ export async function initSettingsStore(): Promise<void> {
     applySettings(event.payload);
   });
 
-  // Listen for system theme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    const currentSettings = get(settings);
-    if (currentSettings.theme === 'auto') {
-      applyTheme('auto');
-    }
-  });
+  // System theme changes no longer needed (single dark theme)
 }
 
 // Auto-initialize when module loads

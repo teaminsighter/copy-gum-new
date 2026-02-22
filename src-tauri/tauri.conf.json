@@ -59,7 +59,7 @@
       "icons/icon.ico"
     ],
     "category": "Utility",
-    "shortDescription": "Modern clipboard manager",
+    "shortDescription": "Modern clipboard manager for Windows and macOS",
     "longDescription": "CopyGum is a powerful clipboard manager that helps you organize and access your clipboard history with a beautiful overlay interface. Features include smart content detection, categories, tags, and global keyboard shortcuts.",
     "copyright": "Copyright 2024 CopyGum",
     "windows": {
