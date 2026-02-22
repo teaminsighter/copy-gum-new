@@ -78,12 +78,5 @@
       "infoPlist": "Info.plist"
     }
   },
-  "plugins": {
-    "updater": {
-      "endpoints": [
-        "https://github.com/teaminsighter/copy-gum-new/releases/latest/download/latest.json"
-      ],
-      "pubkey": ""
-    }
-  }
+  "plugins": {}
 }
