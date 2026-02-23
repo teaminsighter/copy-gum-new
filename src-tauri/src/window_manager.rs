@@ -255,14 +255,13 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             println!("[CopyGum] Window positioned at ({}, {}) with size {}x{}", x, y, work_width, window_height);
         }
 
-        // On macOS, smart positioning based on Dock settings
+        // On macOS, smart positioning using visibleFrame (excludes dock and menu bar)
         #[cfg(target_os = "macos")]
         {
             use objc::msg_send;
             use objc::sel;
             use objc::sel_impl;
             use objc::runtime::Object;
-            use std::process::Command;
 
             #[repr(C)]
             #[derive(Debug, Copy, Clone)]
@@ -274,20 +273,6 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             #[derive(Debug, Copy, Clone)]
             struct NSRect { origin: NSPoint, size: NSSize }
 
-            // Check if Dock auto-hide is enabled
-            let dock_autohide = Command::new("defaults")
-                .args(["read", "com.apple.dock", "autohide"])
-                .output()
-                .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "1")
-                .unwrap_or(false);
-
-            // Check Dock position (bottom, left, right)
-            let dock_position = Command::new("defaults")
-                .args(["read", "com.apple.dock", "orientation"])
-                .output()
-                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-                .unwrap_or_else(|_| "bottom".to_string());
-
             let ns_screen: *mut Object = unsafe { msg_send![objc::class!(NSScreen), mainScreen] };
 
             if !ns_screen.is_null() {
@@ -295,38 +280,28 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                 let visible_frame: NSRect = unsafe { msg_send![ns_screen, visibleFrame] };
                 let scale_factor = window.scale_factor().unwrap_or(1.0);
 
-                let screen_width = (screen_frame.size.width * scale_factor) as u32;
-                let screen_height = (screen_frame.size.height * scale_factor) as i32;
+                // Use visible frame dimensions (already excludes dock and menu bar)
+                let _visible_width = (visible_frame.size.width * scale_factor) as u32;
                 let visible_height = (visible_frame.size.height * scale_factor) as i32;
+                let _visible_origin_x = (visible_frame.origin.x * scale_factor) as i32;
+                let visible_origin_y = (visible_frame.origin.y * scale_factor) as i32;
 
-                // Dynamic height: 45% of visible height, min 420px, max 550px
-                let base_height = (visible_height as f64 * 0.45) as u32;
-                let window_height = base_height.clamp(420, 550);
+                // Screen origin for coordinate conversion (macOS uses bottom-left origin)
+                let screen_height = (screen_frame.size.height * scale_factor) as i32;
 
-                // Dock at bottom: visible_frame.origin.y > 0
-                // Dock at left: visible_frame.origin.x > 0
-                // Dock at right: visible_frame width < screen width
-                let dock_at_bottom = visible_frame.origin.y > 0.0;
-                let dock_height = if dock_at_bottom {
-                    (visible_frame.origin.y * scale_factor) as i32
-                } else {
-                    0
-                };
+                // Dynamic height: 35% of visible height, min 350px, max 480px
+                // This ensures panel fits well regardless of dock size/position
+                let base_height = (visible_height as f64 * 0.35) as u32;
+                let window_height = base_height.clamp(350, 480);
 
-                // Smart positioning:
-                // - If Dock auto-hides OR Dock is not at bottom: position at absolute bottom
-                // - If Dock is visible at bottom: position above it
-                let y = if dock_autohide || !dock_at_bottom {
-                    // Position at absolute bottom - window floats over hidden Dock
-                    screen_height - window_height as i32
-                } else {
-                    // Position above visible Dock
-                    screen_height - dock_height - window_height as i32
-                };
+                // Position at bottom of visible frame
+                // macOS coordinate system: origin at bottom-left, Tauri uses top-left
+                // visible_origin_y is the bottom of the visible area (above dock if present)
+                // We need to convert to top-left coordinates for Tauri
+                let y = screen_height - visible_origin_y - window_height as i32;
 
-                // Ensure y doesn't go above menu bar
-                let menu_bar_height = 25; // Standard macOS menu bar
-                let y = y.max(menu_bar_height);
+                // Use full screen width (dock on sides doesn't affect horizontal)
+                let screen_width = (screen_frame.size.width * scale_factor) as u32;
 
                 window.set_size(tauri::PhysicalSize::new(screen_width, window_height))
                     .map_err(|e| e.to_string())?;
@@ -335,21 +310,16 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
                     .set_position(PhysicalPosition::new(0, y))
                     .map_err(|e| e.to_string())?;
 
-                let position_type = if dock_autohide || !dock_at_bottom {
-                    "at bottom (Dock auto-hides or not at bottom)"
-                } else {
-                    "above Dock"
-                };
-
-                println!("[CopyGum] macOS: screen={}x{}, visible_height={}, dock_autohide={}, dock_position={}",
+                println!("[CopyGum] macOS: screen={}x{}, visible={}x{} at ({},{})",
                     screen_frame.size.width, screen_frame.size.height,
-                    visible_height, dock_autohide, dock_position);
-                println!("[CopyGum] macOS: Window at (0, {}) size {}x{} - {}",
-                    y, screen_width, window_height, position_type);
+                    visible_frame.size.width, visible_frame.size.height,
+                    visible_frame.origin.x, visible_frame.origin.y);
+                println!("[CopyGum] macOS: Window at (0, {}) size {}x{}, visible_height={}",
+                    y, screen_width, window_height, visible_height);
             } else {
-                // Fallback positioning - use 45% of screen height
-                let base_height = (screen_size.height as f64 * 0.45) as u32;
-                let window_height = base_height.clamp(420, 550);
+                // Fallback positioning - use 35% of screen height
+                let base_height = (screen_size.height as f64 * 0.35) as u32;
+                let window_height = base_height.clamp(350, 480);
 
                 window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
                     .map_err(|e| e.to_string())?;
