@@ -1,6 +1,6 @@
 [package]
 name = "copygum-app"
-version = "1.0.7"
+version = "1.0.8"
 description = "A modern clipboard manager built with Tauri"
 authors = ["CopyGum Team"]
 license = "MIT"

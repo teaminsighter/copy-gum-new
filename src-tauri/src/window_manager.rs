@@ -208,7 +208,7 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
     // Get primary monitor
     if let Some(monitor) = window.current_monitor().map_err(|e| e.to_string())? {
         let screen_size = monitor.size();
-        let monitor_position = monitor.position();
+        let _monitor_position = monitor.position();
 
         // On Windows, we need to account for the taskbar and DPI scaling
         // Use the full screen width but position above the taskbar
@@ -256,12 +256,15 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
         }
 
         // On macOS, smart positioning using visibleFrame (excludes dock and menu bar)
+        // Use LOGICAL coordinates (points) - Tauri handles pixel conversion
         #[cfg(target_os = "macos")]
         {
             use objc::msg_send;
             use objc::sel;
             use objc::sel_impl;
             use objc::runtime::Object;
+            use tauri::LogicalPosition;
+            use tauri::LogicalSize;
 
             #[repr(C)]
             #[derive(Debug, Copy, Clone)]
@@ -278,60 +281,57 @@ fn position_window_right(window: &tauri::WebviewWindow) -> Result<(), String> {
             if !ns_screen.is_null() {
                 let screen_frame: NSRect = unsafe { msg_send![ns_screen, frame] };
                 let visible_frame: NSRect = unsafe { msg_send![ns_screen, visibleFrame] };
-                let scale_factor = window.scale_factor().unwrap_or(1.0);
 
-                // Use visible frame dimensions (already excludes dock and menu bar)
-                let _visible_width = (visible_frame.size.width * scale_factor) as u32;
-                let visible_height = (visible_frame.size.height * scale_factor) as i32;
-                let _visible_origin_x = (visible_frame.origin.x * scale_factor) as i32;
-                let visible_origin_y = (visible_frame.origin.y * scale_factor) as i32;
+                // All values in POINTS (logical coordinates) - don't multiply by scale_factor
+                let screen_width = screen_frame.size.width;
+                let screen_height = screen_frame.size.height;
+                let visible_height = visible_frame.size.height;
+                let visible_origin_y = visible_frame.origin.y; // Distance from screen bottom to visible area bottom
 
-                // Screen origin for coordinate conversion (macOS uses bottom-left origin)
-                let screen_height = (screen_frame.size.height * scale_factor) as i32;
-
-                // Dynamic height: 35% of visible height, min 350px, max 480px
-                // This ensures panel fits well regardless of dock size/position
-                let base_height = (visible_height as f64 * 0.35) as u32;
-                let window_height = base_height.clamp(350, 480);
+                // Dynamic height: 35% of visible height, min 280pt, max 380pt
+                // These are POINT values for logical sizing
+                let base_height = visible_height * 0.35;
+                let window_height = base_height.clamp(280.0, 380.0);
 
                 // Position at bottom of visible frame
-                // macOS coordinate system: origin at bottom-left, Tauri uses top-left
-                // visible_origin_y is the bottom of the visible area (above dock if present)
-                // We need to convert to top-left coordinates for Tauri
-                let y = screen_height - visible_origin_y - window_height as i32;
-
-                // Use full screen width (dock on sides doesn't affect horizontal)
-                let screen_width = (screen_frame.size.width * scale_factor) as u32;
-
-                window.set_size(tauri::PhysicalSize::new(screen_width, window_height))
-                    .map_err(|e| e.to_string())?;
-
-                window
-                    .set_position(PhysicalPosition::new(0, y))
-                    .map_err(|e| e.to_string())?;
+                // macOS: Y=0 at bottom, increases upward
+                // Tauri: Y=0 at top, increases downward
+                // visible_origin_y = dock height (if dock at bottom)
+                // Window bottom should be at visible_origin_y (just above dock)
+                // In Tauri coords: y = screen_height - visible_origin_y - window_height
+                let y = screen_height - visible_origin_y - window_height;
 
                 println!("[CopyGum] macOS: screen={}x{}, visible={}x{} at ({},{})",
-                    screen_frame.size.width, screen_frame.size.height,
-                    visible_frame.size.width, visible_frame.size.height,
-                    visible_frame.origin.x, visible_frame.origin.y);
-                println!("[CopyGum] macOS: Window at (0, {}) size {}x{}, visible_height={}",
-                    y, screen_width, window_height, visible_height);
-            } else {
-                // Fallback positioning - use 35% of screen height
-                let base_height = (screen_size.height as f64 * 0.35) as u32;
-                let window_height = base_height.clamp(350, 480);
+                    screen_width, screen_height,
+                    visible_frame.size.width, visible_height,
+                    visible_frame.origin.x, visible_origin_y);
+                println!("[CopyGum] macOS: Window at y={} (logical), size {}x{} (logical)",
+                    y, screen_width, window_height);
 
-                window.set_size(tauri::PhysicalSize::new(screen_size.width, window_height))
+                window.set_size(LogicalSize::new(screen_width, window_height))
                     .map_err(|e| e.to_string())?;
-
-                let x = monitor_position.x;
-                let y = monitor_position.y + screen_size.height as i32 - window_height as i32;
 
                 window
-                    .set_position(PhysicalPosition::new(x, y))
+                    .set_position(LogicalPosition::new(0.0, y))
+                    .map_err(|e| e.to_string())?;
+            } else {
+                // Fallback positioning using Tauri's monitor info
+                let scale = window.scale_factor().unwrap_or(1.0);
+                let logical_height = screen_size.height as f64 / scale;
+                let logical_width = screen_size.width as f64 / scale;
+
+                let base_height = logical_height * 0.35;
+                let window_height = base_height.clamp(280.0, 380.0);
+                let y = logical_height - window_height;
+
+                window.set_size(tauri::LogicalSize::new(logical_width, window_height))
                     .map_err(|e| e.to_string())?;
 
-                println!("[CopyGum] macOS: Fallback positioning at ({}, {}) size {}x{}", x, y, screen_size.width, window_height);
+                window
+                    .set_position(tauri::LogicalPosition::new(0.0, y))
+                    .map_err(|e| e.to_string())?;
+
+                println!("[CopyGum] macOS: Fallback at y={} size {}x{}", y, logical_width, window_height);
             }
         }
 
