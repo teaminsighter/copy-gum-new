@@ -1,6 +1,6 @@
 {
   "name": "copygum-app",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "A modern clipboard manager built with Tauri",
   "type": "module",
   "scripts": {
