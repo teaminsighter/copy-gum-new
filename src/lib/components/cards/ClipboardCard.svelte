@@ -1250,16 +1250,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 20px 0;
+    margin: 8px 0;
     position: relative;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .image-preview {
-    max-width: 100%;
-    max-height: 180px;
-    object-fit: contain;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    height: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   }
 
   .image-metadata {
@@ -1445,6 +1448,22 @@
   .image-card .category-label {
     color: rgba(255, 255, 255, 0.95);
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  }
+
+  /* Image card content - maximize image space */
+  .image-card .card-content {
+    margin-bottom: 8px;
+  }
+
+  .image-card .image-preview-container {
+    margin: 4px 0;
+  }
+
+  .image-card .image-preview {
+    max-height: none;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
   }
 
   /* Color Card Styles */
