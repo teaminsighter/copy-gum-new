@@ -39,6 +39,7 @@ fn main() {
             window_manager::show_window_activated,
             window_manager::get_screen_size_category,
             window_manager::get_screen_info,
+            window_manager::update_global_shortcut,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings,

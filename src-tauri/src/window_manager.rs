@@ -321,15 +321,24 @@ pub fn get_screen_info() -> serde_json::Value {
 }
 
 pub fn setup_global_shortcut(app: &AppHandle) -> Result<(), String> {
+    use crate::settings::AppSettings;
+
+    // Load shortcut from settings
+    let settings = AppSettings::load(app)?;
+    let shortcut_str = &settings.toggle_window_shortcut;
+
+    register_shortcut_internal(app, shortcut_str)
+}
+
+/// Internal function to register a shortcut
+fn register_shortcut_internal(app: &AppHandle, shortcut_str: &str) -> Result<(), String> {
     use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-    // Register Cmd+Shift+V (or Ctrl+Shift+V on other platforms)
-    let shortcut = "CommandOrControl+Shift+V";
-    println!("[CopyGum] Registering global shortcut: {}", shortcut);
+    println!("[CopyGum] Registering global shortcut: {}", shortcut_str);
 
-    let shortcut_parsed = shortcut.parse::<Shortcut>().map_err(|e| {
+    let shortcut_parsed = shortcut_str.parse::<Shortcut>().map_err(|e| {
         println!("[CopyGum] Failed to parse shortcut: {}", e);
-        e.to_string()
+        format!("Invalid shortcut format: {}", e)
     })?;
 
     let app_handle = app.clone();
@@ -348,5 +357,27 @@ pub fn setup_global_shortcut(app: &AppHandle) -> Result<(), String> {
         })?;
 
     println!("[CopyGum] Global shortcut registered successfully!");
+    Ok(())
+}
+
+/// Update the global shortcut (called when settings change)
+#[tauri::command]
+pub fn update_global_shortcut(app: AppHandle, old_shortcut: String, new_shortcut: String) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+
+    println!("[CopyGum] Updating shortcut from '{}' to '{}'", old_shortcut, new_shortcut);
+
+    // Unregister old shortcut
+    if let Ok(old_parsed) = old_shortcut.parse::<Shortcut>() {
+        if let Err(e) = app.global_shortcut().unregister(old_parsed) {
+            println!("[CopyGum] Warning: Failed to unregister old shortcut: {}", e);
+            // Continue anyway - old shortcut might not exist
+        }
+    }
+
+    // Register new shortcut
+    register_shortcut_internal(&app, &new_shortcut)?;
+
+    println!("[CopyGum] Shortcut updated successfully!");
     Ok(())
 }

@@ -17,6 +17,11 @@
   let updateNotes = '';
   let isInstallingUpdate = false;
 
+  // Shortcut capture state
+  let isCapturingShortcut = false;
+  let capturedKeys: string[] = [];
+  let shortcutError = '';
+
   // Get current version on mount
   invoke<string>('get_current_version').then(v => currentVersion = v).catch(() => {});
 
@@ -187,6 +192,102 @@
       showSuccess('Settings reset to defaults');
     } catch (e) {
       showError('Failed to reset settings');
+      console.error(e);
+    }
+  }
+
+  // Shortcut handling functions
+  function formatShortcutDisplay(shortcut: string): string {
+    // Convert internal format to display format
+    return shortcut
+      .replace('CommandOrControl', navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl')
+      .replace('Command', 'Cmd')
+      .replace('Control', 'Ctrl')
+      .replace('Shift', 'Shift')
+      .replace('Alt', navigator.platform.includes('Mac') ? 'Option' : 'Alt')
+      .replace(/\+/g, ' + ');
+  }
+
+  function startShortcutCapture() {
+    isCapturingShortcut = true;
+    capturedKeys = [];
+    shortcutError = '';
+  }
+
+  function cancelShortcutCapture() {
+    isCapturingShortcut = false;
+    capturedKeys = [];
+    shortcutError = '';
+  }
+
+  async function handleKeyDown(event: KeyboardEvent) {
+    if (!isCapturingShortcut) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Build the shortcut string
+    const modifiers: string[] = [];
+    if (event.metaKey || event.ctrlKey) modifiers.push('CommandOrControl');
+    if (event.shiftKey) modifiers.push('Shift');
+    if (event.altKey) modifiers.push('Alt');
+
+    // Get the key (ignore pure modifier keys)
+    const key = event.key;
+    if (['Meta', 'Control', 'Shift', 'Alt'].includes(key)) {
+      // Just a modifier key, update preview but don't finalize
+      capturedKeys = modifiers;
+      return;
+    }
+
+    // Validate: must have at least one modifier
+    if (modifiers.length === 0) {
+      shortcutError = 'Shortcut must include Cmd/Ctrl, Shift, or Alt';
+      return;
+    }
+
+    // Build final shortcut
+    const keyName = key.length === 1 ? key.toUpperCase() : key;
+    const newShortcut = [...modifiers, keyName].join('+');
+
+    // Save the shortcut
+    try {
+      const oldShortcut = $settings.toggle_window_shortcut;
+
+      // First update the backend shortcut registration
+      await invoke('update_global_shortcut', {
+        oldShortcut,
+        newShortcut
+      });
+
+      // Then update settings
+      await updateSetting('toggle_window_shortcut', newShortcut);
+
+      showSuccess('Shortcut updated!');
+      isCapturingShortcut = false;
+      capturedKeys = [];
+      shortcutError = '';
+    } catch (e) {
+      shortcutError = 'Failed to register shortcut. Try a different combination.';
+      console.error('Failed to update shortcut:', e);
+    }
+  }
+
+  async function resetShortcut() {
+    try {
+      const oldShortcut = $settings.toggle_window_shortcut;
+      const defaultShortcut = 'CommandOrControl+Shift+V';
+
+      if (oldShortcut !== defaultShortcut) {
+        await invoke('update_global_shortcut', {
+          oldShortcut,
+          newShortcut: defaultShortcut
+        });
+        await updateSetting('toggle_window_shortcut', defaultShortcut);
+        showSuccess('Shortcut reset to default');
+      }
+    } catch (e) {
+      showError('Failed to reset shortcut');
       console.error(e);
     }
   }
@@ -427,6 +528,65 @@
             />
             <span class="toggle-slider"></span>
           </label>
+        </div>
+      </div>
+
+      <!-- Keyboard Shortcut -->
+      <div class="settings-section">
+        <div class="settings-section-title">Keyboard Shortcut</div>
+
+        <div class="setting-group">
+          <div class="setting-group-label">Open/Close Panel</div>
+          <div class="setting-group-description">Global shortcut to toggle CopyGum panel</div>
+
+          {#if isCapturingShortcut}
+            <!-- Shortcut capture overlay -->
+            <div
+              class="shortcut-capture-box"
+              on:keydown={handleKeyDown}
+              tabindex="0"
+              role="textbox"
+            >
+              <div class="capture-label">Press your desired shortcut...</div>
+              <div class="capture-preview">
+                {#if capturedKeys.length > 0}
+                  {capturedKeys.map(k => k.replace('CommandOrControl', 'Cmd')).join(' + ')} + ...
+                {:else}
+                  Waiting for keys...
+                {/if}
+              </div>
+              {#if shortcutError}
+                <div class="capture-error">{shortcutError}</div>
+              {/if}
+              <button class="capture-cancel-btn" on:click={cancelShortcutCapture}>
+                Cancel
+              </button>
+            </div>
+          {:else}
+            <!-- Current shortcut display -->
+            <div class="shortcut-display">
+              <kbd class="shortcut-key">{formatShortcutDisplay($settings.toggle_window_shortcut)}</kbd>
+              <div class="shortcut-actions">
+                <button
+                  class="shortcut-change-btn"
+                  on:click={startShortcutCapture}
+                  disabled={$isLoadingSettings}
+                >
+                  Change
+                </button>
+                {#if $settings.toggle_window_shortcut !== 'CommandOrControl+Shift+V'}
+                  <button
+                    class="shortcut-reset-btn"
+                    on:click={resetShortcut}
+                    disabled={$isLoadingSettings}
+                    title="Reset to default"
+                  >
+                    Reset
+                  </button>
+                {/if}
+              </div>
+            </div>
+          {/if}
         </div>
       </div>
 
@@ -1037,7 +1197,7 @@
         <div class="shortcuts-list">
           <div class="shortcut-item">
             <span>Open/Close Panel</span>
-            <kbd>Cmd+Shift+V</kbd>
+            <kbd>{formatShortcutDisplay($settings.toggle_window_shortcut)}</kbd>
           </div>
           <div class="shortcut-item">
             <span>Search Items</span>
@@ -1071,7 +1231,7 @@
 
         <div class="settings-section-title" style="margin-top: 24px;">How to Use</div>
         <div class="how-to-use">
-          <p><kbd class="inline-kbd">Cmd+Shift+V</kbd> to open CopyGum</p>
+          <p><kbd class="inline-kbd">{formatShortcutDisplay($settings.toggle_window_shortcut)}</kbd> to open CopyGum</p>
           <p>Your clipboard history appears as cards</p>
           <p>Use <kbd class="inline-kbd">↑</kbd> <kbd class="inline-kbd">↓</kbd> to switch between categories and cards</p>
           <p>Use <kbd class="inline-kbd">←</kbd> <kbd class="inline-kbd">→</kbd> to navigate within each layer</p>
@@ -2111,5 +2271,142 @@
   .danger-button:hover:not(:disabled) {
     border-color: rgba(244, 67, 54, 0.5);
     background: rgba(244, 67, 54, 0.1);
+  }
+
+  /* Shortcut Picker Styles */
+  .shortcut-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: rgba(247, 228, 121, 0.08);
+    border: 1px solid rgba(247, 228, 121, 0.2);
+    border-radius: 8px;
+    margin-top: 8px;
+  }
+
+  .shortcut-key {
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(247, 228, 121, 0.4);
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #f7e479;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .shortcut-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .shortcut-change-btn {
+    padding: 8px 14px;
+    background: rgba(247, 228, 121, 0.15);
+    border: 1px solid rgba(247, 228, 121, 0.3);
+    border-radius: 6px;
+    color: #f7e479;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .shortcut-change-btn:hover:not(:disabled) {
+    background: rgba(247, 228, 121, 0.25);
+    transform: translateY(-1px);
+  }
+
+  .shortcut-change-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .shortcut-reset-btn {
+    padding: 8px 12px;
+    background: rgba(255, 59, 48, 0.12);
+    border: 1px solid rgba(255, 59, 48, 0.25);
+    border-radius: 6px;
+    color: #ff6b5e;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .shortcut-reset-btn:hover:not(:disabled) {
+    background: rgba(255, 59, 48, 0.2);
+    border-color: rgba(255, 59, 48, 0.4);
+  }
+
+  .shortcut-reset-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Shortcut Capture Box */
+  .shortcut-capture-box {
+    margin-top: 8px;
+    padding: 20px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px solid rgba(59, 130, 246, 0.5);
+    border-radius: 10px;
+    text-align: center;
+    outline: none;
+    animation: pulse-border 1.5s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: rgba(59, 130, 246, 0.5); }
+    50% { border-color: rgba(59, 130, 246, 0.8); }
+  }
+
+  .shortcut-capture-box:focus {
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .capture-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 12px;
+  }
+
+  .capture-preview {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    color: #60a5fa;
+    padding: 10px 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    display: inline-block;
+    min-width: 150px;
+    margin-bottom: 12px;
+  }
+
+  .capture-error {
+    font-size: 12px;
+    color: #f87171;
+    margin-bottom: 10px;
+  }
+
+  .capture-cancel-btn {
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .capture-cancel-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 </style>
