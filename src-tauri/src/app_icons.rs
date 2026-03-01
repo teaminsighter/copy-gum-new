@@ -10,7 +10,7 @@ static ICON_CACHE: LazyLock<Mutex<HashMap<String, Option<String>>>> = LazyLock::
     Mutex::new(HashMap::new())
 });
 
-/// Map of bundle IDs to emoji icons for top 20 common apps
+/// Map of bundle IDs to emoji icons for common apps
 static APP_ICONS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     let mut map = HashMap::new();
 
@@ -168,93 +168,7 @@ static APP_NAME_ICONS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock:
     map
 });
 
-/// Fetch app icon from macOS system as base64 PNG
-#[cfg(target_os = "macos")]
-#[allow(deprecated)]
-fn fetch_system_icon(bundle_id: &str) -> Option<String> {
-    use cocoa::base::{id, nil};
-    use cocoa::foundation::NSString;
-    use objc::{class, msg_send, sel, sel_impl};
-
-    unsafe {
-        // Get NSWorkspace
-        let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
-        if workspace == nil {
-            return None;
-        }
-
-        // Create NSString for bundle ID
-        let bundle_id_nsstring = NSString::alloc(nil).init_str(bundle_id);
-        if bundle_id_nsstring == nil {
-            return None;
-        }
-
-        // Get app URL from bundle ID
-        let app_url: id = msg_send![workspace, URLForApplicationWithBundleIdentifier: bundle_id_nsstring];
-        if app_url == nil {
-            return None;
-        }
-
-        // Get path from URL
-        let path: id = msg_send![app_url, path];
-        if path == nil {
-            return None;
-        }
-
-        // Get icon for the app
-        let icon: id = msg_send![workspace, iconForFile: path];
-        if icon == nil {
-            return None;
-        }
-
-        // Set icon size to 32x32
-        let size = cocoa::foundation::NSSize::new(32.0, 32.0);
-        let _: () = msg_send![icon, setSize: size];
-
-        // Convert NSImage to PNG data
-        // First, get TIFF representation
-        let tiff_data: id = msg_send![icon, TIFFRepresentation];
-        if tiff_data == nil {
-            return None;
-        }
-
-        // Create NSBitmapImageRep from TIFF data
-        let bitmap_rep: id = msg_send![class!(NSBitmapImageRep), imageRepWithData: tiff_data];
-        if bitmap_rep == nil {
-            return None;
-        }
-
-        // Convert to PNG (NSBitmapImageFileTypePNG = 4)
-        let png_data: id = msg_send![bitmap_rep, representationUsingType: 4_u64 properties: nil];
-        if png_data == nil {
-            return None;
-        }
-
-        // Get bytes from NSData
-        let length: usize = msg_send![png_data, length];
-        let bytes: *const u8 = msg_send![png_data, bytes];
-
-        if bytes.is_null() || length == 0 {
-            return None;
-        }
-
-        // Copy bytes to Vec
-        let slice = std::slice::from_raw_parts(bytes, length);
-        let png_bytes = slice.to_vec();
-
-        // Encode as base64 data URL
-        let base64_data = BASE64.encode(&png_bytes);
-        Some(format!("data:image/png;base64,{}", base64_data))
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn fetch_system_icon(_bundle_id: &str) -> Option<String> {
-    None // On Windows, use fetch_icon_from_exe instead
-}
-
 /// Fetch app icon from a Windows .exe file as base64 PNG
-#[cfg(target_os = "windows")]
 pub fn fetch_icon_from_exe(exe_path: &str) -> Option<String> {
     use std::ptr;
     use windows::Win32::UI::Shell::ExtractIconExW;
@@ -285,7 +199,7 @@ pub fn fetch_icon_from_exe(exe_path: &str) -> Option<String> {
 
         // Get icon info to access the bitmap
         let mut icon_info = ICONINFO::default();
-        if !GetIconInfo(large_icon, &mut icon_info).is_ok() {
+        if GetIconInfo(large_icon, &mut icon_info).is_err() {
             let _ = DestroyIcon(large_icon);
             return None;
         }
@@ -365,18 +279,8 @@ pub fn fetch_icon_from_exe(exe_path: &str) -> Option<String> {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-pub fn fetch_icon_from_exe(_exe_path: &str) -> Option<String> {
-    None
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn fetch_system_icon(_bundle_id: &str) -> Option<String> {
-    None
-}
-
 /// Get system icon for an app (with caching)
-/// Uses bundle_id on macOS, exe_path on Windows
+/// Uses bundle_id for emoji lookup, exe_path for Windows icon extraction
 pub fn get_system_icon(bundle_id: &str) -> Option<String> {
     // Check cache first
     if let Ok(cache) = ICON_CACHE.lock() {
@@ -385,8 +289,9 @@ pub fn get_system_icon(bundle_id: &str) -> Option<String> {
         }
     }
 
-    // Fetch from system
-    let icon = fetch_system_icon(bundle_id);
+    // On Windows, bundle_id lookup always returns None for system icons
+    // (system icons come from exe path instead)
+    let icon: Option<String> = None;
 
     // Cache the result (even if None, to avoid repeated lookups)
     if let Ok(mut cache) = ICON_CACHE.lock() {
@@ -448,7 +353,7 @@ pub fn get_app_icon(bundle_id: Option<&str>, app_name: &str) -> &'static str {
 /// Returns either a data:image/png;base64,... URL or an emoji string
 #[tauri::command]
 pub fn get_app_icon_data(bundle_id: Option<String>, app_name: String, exe_path: Option<String>) -> String {
-    // Try to get system icon via bundle ID (macOS)
+    // Try to get system icon via bundle ID
     if let Some(ref bid) = bundle_id {
         if let Some(icon_data) = get_system_icon(bid) {
             return icon_data;

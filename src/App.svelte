@@ -26,17 +26,28 @@
   import { initClipboardStore, stopClipboardMonitoring, advancedFilters } from './lib/stores/clipboardStore';
   import { settings } from './lib/stores/settingsStore';
 
-  // Card size mappings (width in pixels)
-  const cardSizeMap: Record<string, number> = {
+  // Card size mappings (width in pixels) — base sizes for >= 1400px
+  const cardSizeBase: Record<string, number> = {
     small: 240,
     medium: 288,
     large: 340
   };
 
+  // Responsive card sizing: shrink on narrow screens
+  function getCardWidth(size: string): number {
+    const base = cardSizeBase[size] || 288;
+    if (typeof window === 'undefined') return base;
+    const vw = window.innerWidth;
+    if (vw < 1024) return Math.round(base * 0.75);
+    if (vw < 1280) return Math.round(base * 0.85);
+    if (vw < 1400) return Math.round(base * 0.92);
+    return base;
+  }
+
   // Apply CSS custom properties based on settings
   $: if (typeof document !== 'undefined') {
     document.documentElement.style.setProperty('--card-font-size', `${$settings.font_size}px`);
-    document.documentElement.style.setProperty('--card-width', `${cardSizeMap[$settings.card_size] || 288}px`);
+    document.documentElement.style.setProperty('--card-width', `${getCardWidth($settings.card_size)}px`);
   }
 
   let visible = true; // Set to true for development/testing
@@ -374,7 +385,7 @@
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--header-gap, 8px);
     margin-left: auto;
     flex-shrink: 1;
     overflow: visible;
@@ -384,10 +395,11 @@
   /* Global Edit Panel Container */
   .global-edit-panel {
     position: fixed;
-    top: 80px;
-    right: 20px;
-    width: 288px;
-    max-height: calc(100vh - 100px);
+    top: calc(var(--header-height, 70px) + 10px);
+    right: var(--header-padding-x, 20px);
+    width: var(--edit-panel-width, 288px);
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - var(--header-height, 70px) - 20px);
     z-index: 10000;
   }
 

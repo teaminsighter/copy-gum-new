@@ -1,12 +1,10 @@
-// App Detector Module - Detects the frontmost application on macOS
+// App Detector Module - Detects the foreground application on Windows
 // This module provides functionality to identify which app the user copied from
 
-// Allow deprecated cocoa APIs until migration to objc2
-#[allow(deprecated)]
-#[cfg(target_os = "macos")]
-use cocoa::base::{id, nil};
-#[cfg(target_os = "macos")]
-use objc::{class, msg_send, sel, sel_impl};
+use windows::Win32::Foundation::HWND;
+use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId};
+use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION};
+use windows::Win32::System::ProcessStatus::GetModuleBaseNameW;
 
 /// Information about the detected source application
 #[derive(Debug, Clone)]
@@ -26,55 +24,8 @@ impl Default for AppInfo {
     }
 }
 
-/// Get the frontmost (active) application on macOS
-#[allow(deprecated)]
-#[cfg(target_os = "macos")]
+/// Get the foreground (active) application on Windows
 pub fn get_frontmost_app() -> AppInfo {
-    unsafe {
-        // Get NSWorkspace shared instance
-        let workspace: id = msg_send![class!(NSWorkspace), sharedWorkspace];
-        if workspace == nil {
-            return AppInfo::default();
-        }
-
-        // Get frontmost application
-        let frontmost_app: id = msg_send![workspace, frontmostApplication];
-        if frontmost_app == nil {
-            return AppInfo::default();
-        }
-
-        // Get localized name
-        let name: id = msg_send![frontmost_app, localizedName];
-        let app_name = if name != nil {
-            nsstring_to_string(name)
-        } else {
-            "Unknown".to_string()
-        };
-
-        // Get bundle identifier
-        let bundle_id: id = msg_send![frontmost_app, bundleIdentifier];
-        let bundle_identifier = if bundle_id != nil {
-            Some(nsstring_to_string(bundle_id))
-        } else {
-            None
-        };
-
-        AppInfo {
-            name: app_name,
-            bundle_id: bundle_identifier,
-            exe_path: None,
-        }
-    }
-}
-
-/// Get the frontmost (active) application on Windows
-#[cfg(target_os = "windows")]
-pub fn get_frontmost_app() -> AppInfo {
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId};
-    use windows::Win32::System::Threading::{OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION};
-    use windows::Win32::System::ProcessStatus::GetModuleBaseNameW;
-
     unsafe {
         // Get the foreground window
         let hwnd: HWND = GetForegroundWindow();
@@ -143,29 +94,10 @@ pub fn get_frontmost_app() -> AppInfo {
     }
 }
 
-/// Fallback for other platforms (Linux, etc.)
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn get_frontmost_app() -> AppInfo {
-    AppInfo::default()
-}
-
 /// Get the exe path from AppInfo (convenience helper)
 #[allow(dead_code)]
 pub fn get_exe_path(app_info: &AppInfo) -> Option<&str> {
     app_info.exe_path.as_deref()
-}
-
-/// Convert NSString to Rust String
-#[allow(deprecated)]
-#[cfg(target_os = "macos")]
-unsafe fn nsstring_to_string(nsstring: id) -> String {
-    let utf8_ptr: *const i8 = msg_send![nsstring, UTF8String];
-    if utf8_ptr.is_null() {
-        return String::new();
-    }
-    std::ffi::CStr::from_ptr(utf8_ptr)
-        .to_string_lossy()
-        .into_owned()
 }
 
 #[cfg(test)]

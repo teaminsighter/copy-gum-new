@@ -96,8 +96,8 @@ impl Default for AppSettings {
             panel_bg_color: "#0a0a0a".to_string(),
 
             // Shortcuts defaults
-            toggle_window_shortcut: "CommandOrControl+Shift+V".to_string(),
-            search_shortcut: "CommandOrControl+F".to_string(),
+            toggle_window_shortcut: "Ctrl+Shift+V".to_string(),
+            search_shortcut: "Ctrl+F".to_string(),
 
             // Privacy defaults
             exclude_apps: vec![],
@@ -217,8 +217,8 @@ mod tests {
         assert!(!settings.enable_blur);
 
         // Shortcuts defaults
-        assert_eq!(settings.toggle_window_shortcut, "CommandOrControl+Shift+V");
-        assert_eq!(settings.search_shortcut, "CommandOrControl+F");
+        assert_eq!(settings.toggle_window_shortcut, "Ctrl+Shift+V");
+        assert_eq!(settings.search_shortcut, "Ctrl+F");
 
         // Privacy defaults
         assert!(settings.exclude_apps.is_empty());

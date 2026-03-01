@@ -243,6 +243,254 @@
   import { loadClipboardItems } from '../../stores/clipboardStore';
   import { loadCategoriesFromDatabase } from '../../stores/categoryStore';
 
+  // ============================================
+  // SHORTCUT RECORDER
+  // ============================================
+  let recordingShortcut: 'toggle' | 'search' | null = null;
+  let recordedKeys: string = '';
+  let shortcutWarning: string = '';
+  let pendingShortcut: string = '';
+  let pendingWhich: 'toggle' | 'search' | null = null;
+  let verifyingShortcut: 'toggle' | 'search' | null = null;
+  let verifyCountdown: number = 0;
+  let verifyTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Common system shortcuts that should trigger a warning
+  const RESERVED_SHORTCUTS: Record<string, string> = {
+    'Ctrl+C': 'Copy',
+    'Ctrl+V': 'Paste',
+    'Ctrl+X': 'Cut',
+    'Ctrl+Z': 'Undo',
+    'Ctrl+Y': 'Redo',
+    'Ctrl+A': 'Select All',
+    'Ctrl+S': 'Save',
+    'Ctrl+W': 'Close Tab',
+    'Ctrl+T': 'New Tab',
+    'Ctrl+N': 'New Window',
+    'Ctrl+P': 'Print',
+    'Ctrl+F': 'Find',
+    'Ctrl+H': 'Replace',
+    'Ctrl+O': 'Open',
+    'Ctrl+Q': 'Quit',
+    'Alt+F4': 'Close Window',
+    'Alt+Tab': 'Switch Window',
+    'Ctrl+Tab': 'Next Tab',
+    'Ctrl+Shift+T': 'Reopen Tab',
+    'Ctrl+Shift+N': 'New Incognito',
+    'Ctrl+Shift+Escape': 'Task Manager',
+  };
+
+  // Capture-phase keydown handler reference (must be stable for removeEventListener)
+  function captureShortcutKey(e: KeyboardEvent) {
+    if (!recordingShortcut) {
+      window.removeEventListener('keydown', captureShortcutKey, true);
+      return;
+    }
+
+    e.preventDefault();
+    e.stopImmediatePropagation(); // Block App.svelte and all other handlers
+
+    // Build modifier string
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push('Ctrl');
+    if (e.altKey) parts.push('Alt');
+    if (e.shiftKey) parts.push('Shift');
+
+    // Ignore bare modifier key presses — just show what's held so far
+    const key = e.key;
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
+      recordedKeys = parts.join('+') + '+...';
+      return;
+    }
+
+    // Map special keys to Tauri shortcut format
+    let mappedKey = key.length === 1 ? key.toUpperCase() : key;
+    const keyMap: Record<string, string> = {
+      'ArrowUp': 'Up', 'ArrowDown': 'Down', 'ArrowLeft': 'Left', 'ArrowRight': 'Right',
+      'Escape': 'Escape', 'Enter': 'Enter', 'Backspace': 'Backspace',
+      'Delete': 'Delete', 'Tab': 'Tab', 'Space': 'Space',
+      ' ': 'Space',
+    };
+    if (keyMap[key]) mappedKey = keyMap[key];
+
+    parts.push(mappedKey);
+    const shortcutStr = parts.join('+');
+
+    // Need at least one modifier + a non-modifier key
+    if (parts.length < 2) {
+      recordedKeys = shortcutStr;
+      return;
+    }
+
+    recordedKeys = shortcutStr;
+
+    // Remove listener before processing
+    window.removeEventListener('keydown', captureShortcutKey, true);
+
+    // Check if this is a reserved/common shortcut
+    const reservedAction = RESERVED_SHORTCUTS[shortcutStr];
+    if (reservedAction) {
+      const which = recordingShortcut;
+      recordingShortcut = null;
+      shortcutWarning = `"${shortcutStr}" is used by the system for "${reservedAction}". Using it here will override that behavior. Are you sure?`;
+      pendingShortcut = shortcutStr;
+      pendingWhich = which;
+      return;
+    }
+
+    // Check if it conflicts with the other CopyGum shortcut
+    const which = recordingShortcut;
+    if (which === 'toggle' && shortcutStr === $settings.search_shortcut) {
+      recordingShortcut = null;
+      shortcutWarning = `"${shortcutStr}" is already used for Search. Choose a different shortcut.`;
+      pendingShortcut = '';
+      pendingWhich = null;
+      return;
+    }
+    if (which === 'search' && shortcutStr === $settings.toggle_window_shortcut) {
+      recordingShortcut = null;
+      shortcutWarning = `"${shortcutStr}" is already used for Toggle Window. Choose a different shortcut.`;
+      pendingShortcut = '';
+      pendingWhich = null;
+      return;
+    }
+
+    applyRecordedShortcut(shortcutStr, recordingShortcut);
+  }
+
+  function startRecording(which: 'toggle' | 'search') {
+    recordingShortcut = which;
+    recordedKeys = '';
+    shortcutWarning = '';
+    pendingShortcut = '';
+    pendingWhich = null;
+    // Attach capture-phase listener on window so we intercept ALL key events
+    window.addEventListener('keydown', captureShortcutKey, true);
+  }
+
+  function cancelRecording() {
+    window.removeEventListener('keydown', captureShortcutKey, true);
+    recordingShortcut = null;
+    recordedKeys = '';
+    shortcutWarning = '';
+    pendingShortcut = '';
+    pendingWhich = null;
+  }
+
+  function dismissWarning() {
+    shortcutWarning = '';
+    pendingShortcut = '';
+    pendingWhich = null;
+  }
+
+  function confirmWarningShortcut() {
+    if (pendingShortcut && pendingWhich) {
+      const sc = pendingShortcut;
+      const wh = pendingWhich;
+      shortcutWarning = '';
+      pendingShortcut = '';
+      pendingWhich = null;
+      applyRecordedShortcut(sc, wh);
+    }
+  }
+
+  async function applyRecordedShortcut(shortcutStr: string, which: 'toggle' | 'search' | null) {
+    recordingShortcut = null;
+
+    if (!which) return;
+
+    if (which === 'toggle') {
+      const oldShortcut = $settings.toggle_window_shortcut;
+      try {
+        await invoke('update_global_shortcut', {
+          oldShortcut,
+          newShortcut: shortcutStr,
+        });
+        await updateSetting('toggle_window_shortcut', shortcutStr);
+        // Start verification
+        startVerification('toggle');
+      } catch (e) {
+        showError(`Failed to set shortcut: ${e}`);
+        console.error(e);
+      }
+    } else if (which === 'search') {
+      try {
+        await updateSetting('search_shortcut', shortcutStr);
+        startVerification('search');
+      } catch (e) {
+        showError(`Failed to set shortcut: ${e}`);
+        console.error(e);
+      }
+    }
+
+    recordedKeys = '';
+  }
+
+  function startVerification(which: 'toggle' | 'search') {
+    verifyingShortcut = which;
+    verifyCountdown = 5;
+    if (verifyTimer) clearInterval(verifyTimer);
+    verifyTimer = setInterval(() => {
+      verifyCountdown--;
+      if (verifyCountdown <= 0) {
+        confirmVerification();
+      }
+    }, 1000);
+  }
+
+  function confirmVerification() {
+    if (verifyTimer) {
+      clearInterval(verifyTimer);
+      verifyTimer = null;
+    }
+    const which = verifyingShortcut;
+    verifyingShortcut = null;
+    verifyCountdown = 0;
+    if (which === 'toggle') {
+      showSuccess(`Toggle shortcut set to ${$settings.toggle_window_shortcut}`);
+    } else if (which === 'search') {
+      showSuccess(`Search shortcut set to ${$settings.search_shortcut}`);
+    }
+  }
+
+  async function revertShortcut() {
+    if (verifyTimer) {
+      clearInterval(verifyTimer);
+      verifyTimer = null;
+    }
+    const which = verifyingShortcut;
+    verifyingShortcut = null;
+    verifyCountdown = 0;
+
+    if (which === 'toggle') {
+      // Revert to default
+      const current = $settings.toggle_window_shortcut;
+      const defaultShortcut = 'Ctrl+Shift+V';
+      try {
+        await invoke('update_global_shortcut', {
+          oldShortcut: current,
+          newShortcut: defaultShortcut,
+        });
+        await updateSetting('toggle_window_shortcut', defaultShortcut);
+        showSuccess('Shortcut reverted to default');
+      } catch (e) {
+        showError(`Failed to revert: ${e}`);
+      }
+    } else if (which === 'search') {
+      try {
+        await updateSetting('search_shortcut', 'Ctrl+F');
+        showSuccess('Shortcut reverted to default');
+      } catch (e) {
+        showError(`Failed to revert: ${e}`);
+      }
+    }
+  }
+
+  // Format shortcut for display (e.g. "Ctrl+Shift+V" → "Ctrl + Shift + V")
+  function formatShortcut(s: string): string {
+    return s.split('+').join(' + ');
+  }
+
   // Coming Soon handlers - features not yet implemented
   async function handleChooseFolder() {
     showInfo('Folder selection coming soon!');
@@ -534,6 +782,81 @@
               <span>90d</span>
             </label>
           </div>
+        </div>
+      </div>
+
+      <!-- Keyboard Shortcuts -->
+      <div class="settings-section">
+        <div class="settings-section-title">Keyboard Shortcuts</div>
+
+        <!-- Warning banner for reserved shortcuts -->
+        {#if shortcutWarning}
+          <div class="shortcut-warning">
+            <div class="shortcut-warning-icon">!</div>
+            <div class="shortcut-warning-text">{shortcutWarning}</div>
+            <div class="shortcut-warning-actions">
+              {#if pendingShortcut}
+                <button class="warning-btn warning-btn-confirm" on:click={confirmWarningShortcut}>Use Anyway</button>
+              {/if}
+              <button class="warning-btn warning-btn-cancel" on:click={dismissWarning}>
+                {pendingShortcut ? 'Cancel' : 'OK'}
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        <div class="setting-group">
+          <div class="setting-group-label">Toggle Window</div>
+          <div class="setting-group-description">Global shortcut to show/hide CopyGum</div>
+          {#if recordingShortcut === 'toggle'}
+            <div class="shortcut-recorder recording">
+              <span class="recorder-text">{recordedKeys || 'Press keys...'}</span>
+              <button class="recorder-cancel" on:click={cancelRecording}>Cancel</button>
+            </div>
+          {:else if verifyingShortcut === 'toggle'}
+            <div class="shortcut-verify">
+              <div class="verify-info">
+                <kbd>{formatShortcut($settings.toggle_window_shortcut)}</kbd>
+                <span class="verify-label">Try pressing it now to test!</span>
+              </div>
+              <div class="verify-actions">
+                <button class="verify-btn verify-btn-ok" on:click={confirmVerification}>Works!</button>
+                <button class="verify-btn verify-btn-revert" on:click={revertShortcut}>Revert ({verifyCountdown}s)</button>
+              </div>
+            </div>
+          {:else}
+            <button class="shortcut-recorder" on:click={() => startRecording('toggle')}>
+              <kbd>{formatShortcut($settings.toggle_window_shortcut)}</kbd>
+              <span class="recorder-hint">Click to change</span>
+            </button>
+          {/if}
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-label">Search</div>
+          <div class="setting-group-description">Focus the search bar (when panel is open)</div>
+          {#if recordingShortcut === 'search'}
+            <div class="shortcut-recorder recording">
+              <span class="recorder-text">{recordedKeys || 'Press keys...'}</span>
+              <button class="recorder-cancel" on:click={cancelRecording}>Cancel</button>
+            </div>
+          {:else if verifyingShortcut === 'search'}
+            <div class="shortcut-verify">
+              <div class="verify-info">
+                <kbd>{formatShortcut($settings.search_shortcut)}</kbd>
+                <span class="verify-label">Try it with the panel open!</span>
+              </div>
+              <div class="verify-actions">
+                <button class="verify-btn verify-btn-ok" on:click={confirmVerification}>Works!</button>
+                <button class="verify-btn verify-btn-revert" on:click={revertShortcut}>Revert ({verifyCountdown}s)</button>
+              </div>
+            </div>
+          {:else}
+            <button class="shortcut-recorder" on:click={() => startRecording('search')}>
+              <kbd>{formatShortcut($settings.search_shortcut)}</kbd>
+              <span class="recorder-hint">Click to change</span>
+            </button>
+          {/if}
         </div>
       </div>
 
@@ -1037,11 +1360,11 @@
         <div class="shortcuts-list">
           <div class="shortcut-item">
             <span>Open/Close Panel</span>
-            <kbd>Cmd+Shift+V</kbd>
+            <kbd>{$settings.toggle_window_shortcut}</kbd>
           </div>
           <div class="shortcut-item">
             <span>Search Items</span>
-            <kbd>Cmd+F</kbd>
+            <kbd>{$settings.search_shortcut}</kbd>
           </div>
           <div class="shortcut-item">
             <span>Switch to Categories</span>
@@ -1071,7 +1394,7 @@
 
         <div class="settings-section-title" style="margin-top: 24px;">How to Use</div>
         <div class="how-to-use">
-          <p><kbd class="inline-kbd">Cmd+Shift+V</kbd> to open CopyGum</p>
+          <p><kbd class="inline-kbd">{$settings.toggle_window_shortcut}</kbd> to open CopyGum</p>
           <p>Your clipboard history appears as cards</p>
           <p>Use <kbd class="inline-kbd">↑</kbd> <kbd class="inline-kbd">↓</kbd> to switch between categories and cards</p>
           <p>Use <kbd class="inline-kbd">←</kbd> <kbd class="inline-kbd">→</kbd> to navigate within each layer</p>
@@ -1131,10 +1454,11 @@
   /* Container */
   .settings-dropdown {
     position: fixed;
-    top: 80px;
-    right: 20px;
-    width: 360px;
-    max-height: calc(100vh - 100px);
+    top: calc(var(--header-height, 70px) + 10px);
+    right: var(--header-padding-x, 20px);
+    width: var(--panel-width, 360px);
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - var(--header-height, 70px) - 20px);
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(247, 228, 121, 0.3);
@@ -1536,6 +1860,207 @@
     display: inline;
     padding: 2px 6px;
     margin: 0 2px;
+  }
+
+  /* Shortcut Recorder */
+  .shortcut-recorder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: inherit;
+    font: inherit;
+    margin-top: 6px;
+  }
+
+  .shortcut-recorder:hover {
+    border-color: rgba(247, 228, 121, 0.4);
+    background: rgba(247, 228, 121, 0.05);
+  }
+
+  .shortcut-recorder.recording {
+    border-color: rgba(247, 228, 121, 0.8);
+    background: rgba(247, 228, 121, 0.1);
+    box-shadow: 0 0 12px rgba(247, 228, 121, 0.15);
+    cursor: default;
+  }
+
+  .shortcut-recorder kbd {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .recorder-hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.35);
+    transition: color 0.2s;
+  }
+
+  .shortcut-recorder:hover .recorder-hint {
+    color: rgba(247, 228, 121, 0.6);
+  }
+
+  .recorder-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f7e479;
+    font-family: 'Courier New', monospace;
+  }
+
+  .recorder-cancel {
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .recorder-cancel:hover {
+    background: rgba(255, 80, 80, 0.2);
+    border-color: rgba(255, 80, 80, 0.4);
+    color: #ff6b6b;
+  }
+
+  /* Shortcut Warning Banner */
+  .shortcut-warning {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: rgba(255, 170, 50, 0.12);
+    border: 1px solid rgba(255, 170, 50, 0.4);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .shortcut-warning-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: rgba(255, 170, 50, 0.3);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 800;
+    color: #ffaa32;
+    flex-shrink: 0;
+  }
+
+  .shortcut-warning-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 220, 150, 0.95);
+  }
+
+  .shortcut-warning-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .warning-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .warning-btn-confirm {
+    background: rgba(255, 170, 50, 0.25);
+    border-color: rgba(255, 170, 50, 0.5);
+    color: #ffcc66;
+  }
+
+  .warning-btn-confirm:hover {
+    background: rgba(255, 170, 50, 0.4);
+  }
+
+  .warning-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .warning-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Shortcut Verification */
+  .shortcut-verify {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(80, 200, 120, 0.1);
+    border: 1px solid rgba(80, 200, 120, 0.4);
+    border-radius: 8px;
+    margin-top: 6px;
+  }
+
+  .verify-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .verify-info kbd {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .verify-label {
+    font-size: 12px;
+    color: rgba(80, 200, 120, 0.9);
+    font-weight: 500;
+  }
+
+  .verify-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .verify-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .verify-btn-ok {
+    background: rgba(80, 200, 120, 0.25);
+    border-color: rgba(80, 200, 120, 0.5);
+    color: #50c878;
+  }
+
+  .verify-btn-ok:hover {
+    background: rgba(80, 200, 120, 0.4);
+  }
+
+  .verify-btn-revert {
+    background: rgba(255, 80, 80, 0.15);
+    border-color: rgba(255, 80, 80, 0.3);
+    color: #ff6b6b;
+  }
+
+  .verify-btn-revert:hover {
+    background: rgba(255, 80, 80, 0.25);
   }
 
   /* How to Use */

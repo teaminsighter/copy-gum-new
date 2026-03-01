@@ -170,7 +170,7 @@
   }
 
   .search-icon-btn.expanded {
-    width: min(300px, 40vw);
+    width: min(300px, 30vw);
     border-radius: 10px;
     justify-content: flex-start;
     padding-left: 12px;
@@ -180,7 +180,7 @@
   .search-input {
     position: absolute;
     left: 45px;
-    width: 240px;
+    width: calc(100% - 55px);
     background: transparent;
     border: none;
     outline: none;

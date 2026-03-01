@@ -37,6 +37,7 @@ fn main() {
             window_manager::toggle_window,
             window_manager::hide_window,
             window_manager::show_window_activated,
+            window_manager::update_global_shortcut,
             settings::get_settings,
             settings::save_settings,
             settings::reset_settings,
@@ -48,47 +49,9 @@ fn main() {
         ])
         .manage(clipboard_monitor::ClipboardMonitor::new())
         .setup(|app| {
-            // Setup global shortcut for Cmd+Shift+V
-            if let Err(e) = window_manager::setup_global_shortcut(&app.handle()) {
+            // Setup global shortcut (reads from saved settings, defaults to Ctrl+Shift+V)
+            if let Err(e) = window_manager::setup_global_shortcut(app.handle()) {
                 eprintln!("Failed to setup global shortcut: {}", e);
-            }
-
-            // Configure window for overlay behavior on macOS
-            #[cfg(target_os = "macos")]
-            {
-                use tauri::Manager;
-                if let Some(window) = app.get_webview_window("main") {
-                    // Allow deprecated cocoa APIs until migration to objc2
-                    #[allow(deprecated)]
-                    use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
-                    #[allow(deprecated)]
-                    use cocoa::base::{id, NO};
-                    use objc::{msg_send, sel, sel_impl};
-
-                    // NSStatusWindowLevel = 25 (same as window_manager.rs)
-                    const OVERLAY_WINDOW_LEVEL: i64 = 25;
-
-                    if let Ok(ns_win_ptr) = window.ns_window() {
-                        #[allow(deprecated)]
-                        unsafe {
-                            let ns_win = ns_win_ptr as id;
-
-                            // Set collection behavior for multi-space and fullscreen support
-                            // Must match the behavior set in window_manager::toggle_window
-                            let behavior = NSWindowCollectionBehavior::NSWindowCollectionBehaviorCanJoinAllSpaces
-                                | NSWindowCollectionBehavior::NSWindowCollectionBehaviorStationary
-                                | NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
-                                | NSWindowCollectionBehavior::NSWindowCollectionBehaviorIgnoresCycle;
-                            ns_win.setCollectionBehavior_(behavior);
-
-                            // Set overlay window level (consistent with toggle_window)
-                            let _: () = msg_send![ns_win, setLevel: OVERLAY_WINDOW_LEVEL];
-
-                            // Don't hide when app loses focus - critical for overlay behavior
-                            let _: () = msg_send![ns_win, setHidesOnDeactivate: NO];
-                        }
-                    }
-                }
             }
 
             Ok(())

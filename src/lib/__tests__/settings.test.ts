@@ -57,12 +57,12 @@ describe('defaultSettings', () => {
   });
 
   describe('Shortcuts', () => {
-    it('has CommandOrControl+Shift+V as toggle shortcut', () => {
-      expect(defaultSettings.toggleWindowShortcut).toBe('CommandOrControl+Shift+V');
+    it('has Ctrl+Shift+V as toggle shortcut', () => {
+      expect(defaultSettings.toggleWindowShortcut).toBe('Ctrl+Shift+V');
     });
 
-    it('has CommandOrControl+F as search shortcut', () => {
-      expect(defaultSettings.searchShortcut).toBe('CommandOrControl+F');
+    it('has Ctrl+F as search shortcut', () => {
+      expect(defaultSettings.searchShortcut).toBe('Ctrl+F');
     });
   });
 

@@ -39,12 +39,12 @@
     right: 0;
     width: 100%;
     max-width: 100%;
-    height: 70px;
+    height: var(--header-height, 70px);
     background: transparent;
-    padding: 15px 20px;
+    padding: var(--header-padding-y, 15px) var(--header-padding-x, 20px);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--header-gap, 12px);
     z-index: 10;
     box-sizing: border-box;
     overflow: hidden;
@@ -52,7 +52,7 @@
 
   .content-area {
     position: absolute;
-    top: 70px;
+    top: var(--header-height, 70px);
     left: 0;
     right: 0;
     bottom: 0;

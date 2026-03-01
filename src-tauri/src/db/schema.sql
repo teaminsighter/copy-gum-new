@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
     -- System Integration
     launch_at_startup BOOLEAN NOT NULL DEFAULT 0,
-    global_shortcut TEXT NOT NULL DEFAULT 'CommandOrControl+Shift+V',
+    global_shortcut TEXT NOT NULL DEFAULT 'Ctrl+Shift+V',
 
     -- Storage
     storage_type TEXT NOT NULL DEFAULT 'local', -- 'local' or 'cloud'

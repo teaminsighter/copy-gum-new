@@ -152,6 +152,7 @@
     border: 1px solid rgba(247, 228, 121, 0.3);
     border-radius: 16px;
     width: 340px;
+    max-width: calc(100vw - 40px);
     padding: 20px 24px 24px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
   }

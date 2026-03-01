@@ -576,9 +576,9 @@
   .cards-container {
     display: flex;
     align-items: flex-start;
-    gap: 16px;
+    gap: var(--cards-gap, 16px);
     height: 100%;
-    padding: 4px 20px 0 20px;
+    padding: 4px var(--cards-padding-x, 20px) 0 var(--cards-padding-x, 20px);
     overflow-x: auto;
     overflow-y: visible;
     cursor: grab;

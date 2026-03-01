@@ -185,7 +185,8 @@
   /* Reference: preview.html lines 1515-1543 */
   .edit-panel {
     position: relative;
-    width: 288px;
+    width: var(--edit-panel-width, 288px);
+    max-width: calc(100vw - 40px);
     max-height: 320px;
     background: rgba(20, 20, 20, 0.98);
     border-radius: 12px;

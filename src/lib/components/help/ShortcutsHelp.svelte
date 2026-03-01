@@ -1,17 +1,20 @@
 <script lang="ts">
   // Keyboard Shortcuts Help Panel
+  import { settings } from '../../stores/settingsStore';
+
   export let show = false;
 
-  // Detect platform for displaying correct modifier key
-  const isMac = navigator.platform.toLowerCase().includes('mac');
-  const modKey = isMac ? 'Cmd' : 'Ctrl';
+  // Parse a shortcut string like "Ctrl+Shift+V" into key parts
+  function parseShortcut(shortcut: string): string[] {
+    return shortcut.split('+');
+  }
 
-  // Shortcut categories
-  const shortcuts = [
+  // Reactive shortcut categories — update when settings change
+  $: shortcuts = [
     {
       category: 'Window',
       items: [
-        { keys: [modKey, 'Shift', 'V'], desc: 'Toggle window' },
+        { keys: parseShortcut($settings.toggle_window_shortcut), desc: 'Toggle window' },
         { keys: ['Esc'], desc: 'Close window / Clear search' },
       ]
     },
@@ -21,17 +24,17 @@
         { keys: ['←', '→'], desc: 'Navigate items' },
         { keys: ['↑'], desc: 'Switch to categories' },
         { keys: ['↓'], desc: 'Switch to items' },
-        { keys: [modKey, 'F'], desc: 'Focus search' },
-        { keys: [modKey, 'Shift', 'F'], desc: 'Toggle filters' },
+        { keys: parseShortcut($settings.search_shortcut), desc: 'Focus search' },
+        { keys: ['Ctrl', 'Shift', 'F'], desc: 'Toggle filters' },
       ]
     },
     {
       category: 'Actions',
       items: [
         { keys: ['Enter'], desc: 'Copy selected item' },
-        { keys: [modKey, 'P'], desc: 'Pin/unpin item' },
-        { keys: [modKey, 'Delete'], desc: 'Delete item' },
-        { keys: [modKey, 'Shift', 'C'], desc: 'Clear filters' },
+        { keys: ['Ctrl', 'P'], desc: 'Pin/unpin item' },
+        { keys: ['Ctrl', 'Delete'], desc: 'Delete item' },
+        { keys: ['Ctrl', 'Shift', 'C'], desc: 'Clear filters' },
       ]
     },
     {

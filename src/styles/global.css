@@ -118,14 +118,73 @@ body {
     overflow-x: hidden;
 }
 
-/* Window opacity and blur effects */
-:root.blur-enabled body {
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-}
-
 #app {
     width: 100%;
     height: 100%;
     opacity: 1;
+}
+
+/* ============================================
+   RESPONSIVE LAYOUT VARIABLES
+   Centralized sizing that components inherit
+   ============================================ */
+:root {
+    --header-height: 70px;
+    --header-padding-x: 20px;
+    --header-padding-y: 15px;
+    --header-gap: 12px;
+    --panel-width: 360px;
+    --filters-width: 320px;
+    --edit-panel-width: 288px;
+    --cards-gap: 16px;
+    --cards-padding-x: 20px;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Narrow screens: 1280-1399px (common 1366x768 laptops) */
+@media (max-width: 1399px) {
+    :root {
+        --header-height: 62px;
+        --header-padding-x: 14px;
+        --header-padding-y: 12px;
+        --header-gap: 8px;
+        --panel-width: 320px;
+        --filters-width: 280px;
+        --edit-panel-width: 260px;
+        --cards-gap: 12px;
+        --cards-padding-x: 14px;
+    }
+}
+
+/* Very narrow screens: <1280px (1280x720 budget laptops, high DPI effective) */
+@media (max-width: 1279px) {
+    :root {
+        --header-height: 56px;
+        --header-padding-x: 10px;
+        --header-padding-y: 10px;
+        --header-gap: 6px;
+        --panel-width: 290px;
+        --filters-width: 260px;
+        --edit-panel-width: 240px;
+        --cards-gap: 10px;
+        --cards-padding-x: 10px;
+    }
+}
+
+/* Tiny screens: <1024px (extreme DPI or very small displays) */
+@media (max-width: 1023px) {
+    :root {
+        --header-height: 50px;
+        --header-padding-x: 8px;
+        --header-padding-y: 8px;
+        --header-gap: 4px;
+        --panel-width: 260px;
+        --filters-width: 240px;
+        --edit-panel-width: 220px;
+        --cards-gap: 8px;
+        --cards-padding-x: 8px;
+    }
 }

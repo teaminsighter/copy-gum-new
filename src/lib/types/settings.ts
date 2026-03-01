@@ -21,8 +21,8 @@ export interface AppSettings {
   showThumbnails: boolean;
 
   // Keyboard shortcuts
-  toggleWindowShortcut: string;  // 'CommandOrControl+Shift+V'
-  searchShortcut: string;        // 'CommandOrControl+F'
+  toggleWindowShortcut: string;  // 'Ctrl+Shift+V'
+  searchShortcut: string;        // 'Ctrl+F'
 
   // Privacy settings
   excludeApps: string[];         // Apps to not capture from
@@ -51,8 +51,8 @@ export const defaultSettings: AppSettings = {
   showThumbnails: true,
 
   // Shortcut defaults
-  toggleWindowShortcut: 'CommandOrControl+Shift+V',
-  searchShortcut: 'CommandOrControl+F',
+  toggleWindowShortcut: 'Ctrl+Shift+V',
+  searchShortcut: 'Ctrl+F',
 
   // Privacy defaults
   excludeApps: [],

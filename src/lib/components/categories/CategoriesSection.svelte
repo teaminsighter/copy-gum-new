@@ -479,7 +479,7 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    margin: 0 20px;
+    margin: 0 var(--header-gap, 12px);
     overflow: visible;
     position: relative;
     max-width: calc(100% - 40px);
@@ -487,7 +487,7 @@
 
   .categories-container {
     display: flex;
-    gap: 8px;
+    gap: var(--header-gap, 8px);
     overflow-x: auto;
     overflow-y: visible;
     cursor: grab;

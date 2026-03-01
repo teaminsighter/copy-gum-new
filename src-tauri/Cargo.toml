@@ -6,15 +6,11 @@ authors = ["CopyGum Team"]
 license = "MIT"
 edition = "2021"
 
-[lints.rust]
-# Suppress cfg warnings from objc crate macros (old version uses deprecated cfg patterns)
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(feature, values(\"cargo-clippy\"))"] }
-
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0", features = ["protocol-asset", "macos-private-api"] }
+tauri = { version = "2.0", features = ["protocol-asset"] }
 tauri-plugin-clipboard-manager = "2.0"
 tauri-plugin-sql = { version = "2.0", features = ["sqlite"] }
 tauri-plugin-fs = "2.0"
@@ -33,20 +29,14 @@ arboard = { version = "3.6.1", features = ["image-data"] }
 once_cell = "1.19"
 base64 = "0.22"
 
-# macOS app detection
-[target.'cfg(target_os = "macos")'.dependencies]
-cocoa = "0.26"
-objc = "0.2"
-
-# Windows app detection, icon extraction, and window management
-[target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Shell",
     "Win32_Graphics_Gdi",
     "Win32_System_Threading",
-    "Win32_System_ProcessStatus"
+    "Win32_System_ProcessStatus",
+    "Win32_System_DataExchange"
 ] }
 
 [dev-dependencies]

@@ -399,10 +399,11 @@
   /* Sidebar */
   .filters-sidebar {
     position: fixed;
-    top: 70px;
+    top: var(--header-height, 70px);
     left: 0;
-    width: 320px;
-    height: calc(100vh - 70px);
+    width: var(--filters-width, 320px);
+    max-width: 80vw;
+    height: calc(100vh - var(--header-height, 70px));
     background: rgba(20, 20, 25, 0.98);
     backdrop-filter: blur(20px);
     border-right: 1px solid rgba(247, 228, 121, 0.3);
@@ -428,8 +429,8 @@
   /* Overlay */
   .sidebar-overlay {
     position: fixed;
-    top: 70px;
-    left: 320px;
+    top: var(--header-height, 70px);
+    left: var(--filters-width, 320px);
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4);
