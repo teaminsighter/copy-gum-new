@@ -165,11 +165,68 @@ impl ClipboardMonitor {
     }
 
     async fn read_clipboard_image(&self) -> Option<Vec<u8>> {
+        // Try native macOS NSPasteboard first (more reliable)
+        if let Some(png_data) = self.read_clipboard_image_native() {
+            return Some(png_data);
+        }
+
+        // Fall back to arboard as secondary option
+        self.read_clipboard_image_arboard()
+    }
+
+    /// Read image from clipboard using native macOS NSPasteboard
+    fn read_clipboard_image_native(&self) -> Option<Vec<u8>> {
+        use objc::{msg_send, sel, sel_impl, class};
+        use objc::runtime::Object;
+
+        unsafe {
+            let pasteboard: *mut Object = msg_send![class!(NSPasteboard), generalPasteboard];
+
+            // Check for PNG data first (highest quality)
+            let png_type: *mut Object = msg_send![class!(NSString), stringWithUTF8String:b"public.png\0".as_ptr()];
+            let png_data: *mut Object = msg_send![pasteboard, dataForType:png_type];
+
+            if !png_data.is_null() {
+                let length: usize = msg_send![png_data, length];
+                if length > 0 {
+                    let bytes: *const u8 = msg_send![png_data, bytes];
+                    let data = std::slice::from_raw_parts(bytes, length).to_vec();
+                    return Some(data);
+                }
+            }
+
+            // Check for TIFF data (common for screenshots)
+            let tiff_type: *mut Object = msg_send![class!(NSString), stringWithUTF8String:b"public.tiff\0".as_ptr()];
+            let tiff_data: *mut Object = msg_send![pasteboard, dataForType:tiff_type];
+
+            if !tiff_data.is_null() {
+                let length: usize = msg_send![tiff_data, length];
+                if length > 0 {
+                    let bytes: *const u8 = msg_send![tiff_data, bytes];
+                    let tiff_bytes = std::slice::from_raw_parts(bytes, length).to_vec();
+
+                    // Convert TIFF to PNG
+                    if let Ok(img) = image::load_from_memory(&tiff_bytes) {
+                        let mut png_bytes = Vec::new();
+                        use image::ImageFormat;
+                        use std::io::Cursor;
+                        if img.write_to(&mut Cursor::new(&mut png_bytes), ImageFormat::Png).is_ok() {
+                            return Some(png_bytes);
+                        }
+                    }
+                }
+            }
+
+            None
+        }
+    }
+
+    /// Fall back to arboard for reading images
+    fn read_clipboard_image_arboard(&self) -> Option<Vec<u8>> {
         use arboard::Clipboard;
         use image::{DynamicImage, ImageFormat};
         use std::io::Cursor;
 
-        // Try to get clipboard image
         let mut clipboard = Clipboard::new().ok()?;
         let image_data = clipboard.get_image().ok()?;
 
