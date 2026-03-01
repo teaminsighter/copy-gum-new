@@ -1,10 +1,15 @@
 // Settings Module
-// Handles application settings storage and retrieval
+// Handles application settings storage and retrieval with caching
 
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::RwLock;
 use tauri::{AppHandle, Emitter, Manager};
+use once_cell::sync::Lazy;
+
+// Global settings cache to avoid disk I/O on every clipboard poll
+static SETTINGS_CACHE: Lazy<RwLock<Option<AppSettings>>> = Lazy::new(|| RwLock::new(None));
 
 // Default functions for new settings fields
 fn default_density() -> String {
@@ -111,8 +116,28 @@ impl Default for AppSettings {
 }
 
 impl AppSettings {
-    /// Load settings from file
+    /// Load settings from cache or file (avoids disk I/O on repeated calls)
     pub fn load(app: &AppHandle) -> Result<Self, String> {
+        // Try to get from cache first
+        if let Ok(cache) = SETTINGS_CACHE.read() {
+            if let Some(ref settings) = *cache {
+                return Ok(settings.clone());
+            }
+        }
+
+        // Not in cache, load from disk
+        let settings = Self::load_from_disk(app)?;
+
+        // Store in cache
+        if let Ok(mut cache) = SETTINGS_CACHE.write() {
+            *cache = Some(settings.clone());
+        }
+
+        Ok(settings)
+    }
+
+    /// Load settings directly from disk (bypasses cache)
+    fn load_from_disk(app: &AppHandle) -> Result<Self, String> {
         let settings_path = Self::get_settings_path(app)?;
 
         if settings_path.exists() {
@@ -128,7 +153,7 @@ impl AppSettings {
         }
     }
 
-    /// Save settings to file
+    /// Save settings to file and update cache
     pub fn save(&self, app: &AppHandle) -> Result<(), String> {
         let settings_path = Self::get_settings_path(app)?;
 
@@ -138,7 +163,19 @@ impl AppSettings {
         fs::write(&settings_path, json)
             .map_err(|e| format!("Failed to write settings: {}", e))?;
 
+        // Update cache
+        if let Ok(mut cache) = SETTINGS_CACHE.write() {
+            *cache = Some(self.clone());
+        }
+
         Ok(())
+    }
+
+    /// Invalidate the settings cache (called when settings might have changed externally)
+    pub fn invalidate_cache() {
+        if let Ok(mut cache) = SETTINGS_CACHE.write() {
+            *cache = None;
+        }
     }
 
     /// Get the path to the settings file

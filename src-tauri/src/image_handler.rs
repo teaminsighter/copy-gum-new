@@ -82,10 +82,11 @@ pub async fn save_clipboard_image(
 
 /// Generate thumbnail for image
 ///
-/// Resizes image to fit within 400x400 while maintaining aspect ratio
+/// Resizes image to fit within 300x300 while maintaining aspect ratio
+/// Uses Triangle filter for fast generation (good quality, much faster than Lanczos3)
 fn generate_thumbnail(img: &DynamicImage) -> DynamicImage {
     let (width, height) = img.dimensions();
-    let max_dimension = 400;
+    let max_dimension = 300; // Reduced for faster generation and smaller files
 
     // If image is already smaller than max dimension, return as-is
     if width <= max_dimension && height <= max_dimension {
@@ -101,8 +102,9 @@ fn generate_thumbnail(img: &DynamicImage) -> DynamicImage {
         ((width as f32 * ratio) as u32, max_dimension)
     };
 
-    // Resize using Lanczos3 filter (high quality)
-    img.resize(new_width, new_height, FilterType::Lanczos3)
+    // Resize using Triangle filter (bilinear) - 5-10x faster than Lanczos3
+    // Still provides good quality for thumbnails
+    img.resize(new_width, new_height, FilterType::Triangle)
 }
 
 /// Extract dominant color from image

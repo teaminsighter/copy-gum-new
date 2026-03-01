@@ -129,3 +129,22 @@ body {
     height: 100%;
     opacity: 1;
 }
+
+/* Responsive scaling based on screen category */
+:root[data-screen-category="small"] {
+    --header-height: 70px;
+    --card-gap: 14px;
+    --panel-padding: 16px;
+}
+
+:root[data-screen-category="medium"] {
+    --header-height: 75px;
+    --card-gap: 18px;
+    --panel-padding: 20px;
+}
+
+:root[data-screen-category="large"] {
+    --header-height: 80px;
+    --card-gap: 22px;
+    --panel-padding: 24px;
+}

@@ -2,9 +2,35 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Run as background app (no dock icon) -->
 	<key>LSUIElement</key>
 	<true/>
+
+	<!-- App can run on Apple Silicon and Intel -->
+	<key>LSArchitecturePriority</key>
+	<array>
+		<string>arm64</string>
+		<string>x86_64</string>
+	</array>
+
+	<!-- Accessibility description for frontmost app detection -->
 	<key>NSAppleEventsUsageDescription</key>
 	<string>CopyGum needs access to detect which application you copied from.</string>
+
+	<!-- Required for global keyboard shortcuts -->
+	<key>NSAccessibilityUsageDescription</key>
+	<string>CopyGum needs accessibility access for global keyboard shortcuts.</string>
+
+	<!-- App supports dark mode -->
+	<key>NSRequiresAquaSystemAppearance</key>
+	<false/>
+
+	<!-- High resolution capable -->
+	<key>NSHighResolutionCapable</key>
+	<true/>
+
+	<!-- Supports all screen sizes including notch displays -->
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
 </dict>
 </plist>

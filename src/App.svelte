@@ -4,6 +4,9 @@
 
   import { onMount, onDestroy } from 'svelte';
   import { invoke } from '@tauri-apps/api/core';
+
+  // Screen size category for responsive scaling
+  let screenCategory: 'small' | 'medium' | 'large' = 'small';
   import SvgFilters from './lib/components/ui/SvgFilters.svelte';
   import OverlayPanel from './lib/components/core/OverlayPanel.svelte';
   import LogoSection from './lib/components/header/LogoSection.svelte';
@@ -26,17 +29,40 @@
   import { initClipboardStore, stopClipboardMonitoring, advancedFilters } from './lib/stores/clipboardStore';
   import { settings } from './lib/stores/settingsStore';
 
-  // Card size mappings (width in pixels)
-  const cardSizeMap: Record<string, number> = {
-    small: 240,
-    medium: 288,
-    large: 340
+  // Responsive card size mappings based on screen category
+  // Small screens (laptops): smaller cards
+  // Medium screens (24" iMac): medium cards
+  // Large screens (27"+): larger cards
+  const cardSizeMap: Record<string, Record<string, number>> = {
+    small: {  // MacBook Air/Pro 13-16"
+      small: 220,
+      medium: 270,
+      large: 320
+    },
+    medium: { // 24" iMac, large external
+      small: 260,
+      medium: 310,
+      large: 370
+    },
+    large: {  // 27" iMac, 4K external, ultrawide
+      small: 300,
+      medium: 360,
+      large: 420
+    }
   };
 
-  // Apply CSS custom properties based on settings
+  // Get card width based on screen category and user setting
+  function getCardWidth(screenCat: string, sizeSetting: string): number {
+    const screenSizes = cardSizeMap[screenCat] || cardSizeMap.small;
+    return screenSizes[sizeSetting] || screenSizes.medium;
+  }
+
+  // Apply CSS custom properties based on settings and screen size
   $: if (typeof document !== 'undefined') {
+    const cardWidth = getCardWidth(screenCategory, $settings.card_size);
     document.documentElement.style.setProperty('--card-font-size', `${$settings.font_size}px`);
-    document.documentElement.style.setProperty('--card-width', `${cardSizeMap[$settings.card_size] || 288}px`);
+    document.documentElement.style.setProperty('--card-width', `${cardWidth}px`);
+    document.documentElement.setAttribute('data-screen-category', screenCategory);
   }
 
   let visible = true; // Set to true for development/testing
@@ -181,6 +207,15 @@
   }
 
   onMount(async () => {
+    // Get screen size category for responsive UI
+    try {
+      screenCategory = await invoke<'small' | 'medium' | 'large'>('get_screen_size_category');
+      console.log('[CopyGum] Screen category:', screenCategory);
+    } catch (err) {
+      console.error('Failed to get screen category:', err);
+      screenCategory = 'small'; // Default fallback
+    }
+
     // Ensure all default categories exist in database (handles migration)
     await ensureDefaultCategories();
 

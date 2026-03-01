@@ -30,7 +30,7 @@
 <style>
   .skeleton-card {
     flex-shrink: 0;
-    width: 288px;
+    width: var(--card-width, 288px);
     height: 95%;
     border-radius: 12px;
     position: relative;

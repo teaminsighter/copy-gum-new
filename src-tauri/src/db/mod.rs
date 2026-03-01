@@ -21,11 +21,27 @@ pub fn init_database() -> Vec<Migration> {
             sql: "ALTER TABLE clipboard_items ADD COLUMN app_bundle_id TEXT;",
             kind: MigrationKind::Up,
         },
-        // Migration 3: Add app_exe_path column for Windows icon extraction
+        // Migration 3: Add app_exe_path column (for cross-platform compatibility)
         Migration {
             version: 3,
             description: "add_app_exe_path_column",
             sql: "ALTER TABLE clipboard_items ADD COLUMN app_exe_path TEXT;",
+            kind: MigrationKind::Up,
+        },
+        // Migration 4: Performance optimization - composite index for common queries
+        Migration {
+            version: 4,
+            description: "add_composite_index_for_performance",
+            sql: r#"
+                -- Composite index for the most common query pattern
+                CREATE INDEX IF NOT EXISTS idx_clipboard_items_active_sorted
+                ON clipboard_items(is_deleted, is_pinned DESC, timestamp DESC);
+
+                -- Analyze tables to update query planner statistics
+                ANALYZE clipboard_items;
+                ANALYZE categories;
+                ANALYZE tags;
+            "#,
             kind: MigrationKind::Up,
         },
     ]

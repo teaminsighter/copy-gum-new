@@ -1,5 +1,6 @@
 // Clipboard Monitoring Module
-// Monitors clipboard changes and captures content
+// Monitors clipboard changes using native macOS NSPasteboard.changeCount
+// This is much more efficient than polling clipboard content
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -11,12 +12,26 @@ use crate::app_detector::get_frontmost_app;
 use crate::app_icons::get_app_icon;
 use crate::settings::AppSettings;
 
+/// Get the current NSPasteboard change count (native macOS API)
+/// This is extremely fast - just reads an integer from the system
+fn get_pasteboard_change_count() -> i64 {
+    use objc::{msg_send, sel, sel_impl, class};
+    use objc::runtime::Object;
+
+    unsafe {
+        let pasteboard: *mut Object = msg_send![class!(NSPasteboard), generalPasteboard];
+        let change_count: i64 = msg_send![pasteboard, changeCount];
+        change_count
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ClipboardMonitor {
     is_running: Arc<Mutex<bool>>,
     last_content: Arc<Mutex<String>>,
     last_image_hash: Arc<Mutex<String>>,
     last_timestamp: Arc<Mutex<i64>>,
+    last_change_count: Arc<Mutex<i64>>, // Native macOS change count
     debounce_ms: i64,
 }
 
@@ -27,6 +42,7 @@ impl ClipboardMonitor {
             last_content: Arc::new(Mutex::new(String::new())),
             last_image_hash: Arc::new(Mutex::new(String::new())),
             last_timestamp: Arc::new(Mutex::new(0)),
+            last_change_count: Arc::new(Mutex::new(0)),
             debounce_ms: 1000, // 1 second debounce window (prevents accidental double-copy)
         }
     }
@@ -57,18 +73,43 @@ impl ClipboardMonitor {
     }
 
     async fn monitor_loop(&self, app: AppHandle) {
+        // Initialize with current change count to avoid processing existing clipboard
+        {
+            let mut last_count = self.last_change_count.lock().await;
+            *last_count = get_pasteboard_change_count();
+        }
+
         while *self.is_running.lock().await {
-            // Check settings for save_images preference
+            // NATIVE macOS OPTIMIZATION:
+            // Check NSPasteboard.changeCount first - this is instant (just reads an int)
+            // Only process clipboard if changeCount has changed
+            let current_change_count = get_pasteboard_change_count();
+            let last_count = *self.last_change_count.lock().await;
+
+            if current_change_count == last_count {
+                // Clipboard hasn't changed - sleep and continue
+                // Using 250ms for responsiveness while still being efficient
+                sleep(Duration::from_millis(250)).await;
+                continue;
+            }
+
+            // Clipboard HAS changed - update our tracking
+            {
+                let mut count = self.last_change_count.lock().await;
+                *count = current_change_count;
+            }
+
+            // Check settings for save_images preference (cached, so fast)
             let save_images = match AppSettings::load(&app) {
                 Ok(settings) => settings.save_images,
-                Err(_) => true, // Default to true if settings can't be loaded
+                Err(_) => true,
             };
 
             // Check for images first (higher priority) - only if save_images is enabled
             if save_images {
                 if let Some(image_data) = self.read_clipboard_image().await {
                     self.handle_clipboard_image(&app, image_data).await;
-                    sleep(Duration::from_millis(500)).await;
+                    sleep(Duration::from_millis(100)).await;
                     continue;
                 }
             }
@@ -102,8 +143,8 @@ impl ClipboardMonitor {
                 }
             }
 
-            // Poll every 500ms
-            sleep(Duration::from_millis(500)).await;
+            // Small delay after processing to prevent tight loop
+            sleep(Duration::from_millis(100)).await;
         }
     }
 
