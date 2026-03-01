@@ -197,14 +197,32 @@
   }
 
   // Shortcut handling functions
+  const isMac = navigator.platform.includes('Mac');
+
+  // Reserved/conflicting shortcuts that should not be used
+  const reservedShortcuts = [
+    'CommandOrControl+C', 'CommandOrControl+V', 'CommandOrControl+X', // Copy/Paste/Cut
+    'CommandOrControl+Z', 'CommandOrControl+A', 'CommandOrControl+S', // Undo/Select All/Save
+    'CommandOrControl+Q', 'CommandOrControl+W', 'CommandOrControl+N', // Quit/Close/New
+    'CommandOrControl+O', 'CommandOrControl+P', 'CommandOrControl+F', // Open/Print/Find
+    'CommandOrControl+H', 'CommandOrControl+M', // Hide/Minimize (Mac)
+    'CommandOrControl+Tab', 'Alt+Tab', // App switcher
+  ];
+
+  function isReservedShortcut(shortcut: string): boolean {
+    return reservedShortcuts.some(reserved =>
+      shortcut.toLowerCase() === reserved.toLowerCase()
+    );
+  }
+
   function formatShortcutDisplay(shortcut: string): string {
     // Convert internal format to display format
     return shortcut
-      .replace('CommandOrControl', navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl')
+      .replace('CommandOrControl', isMac ? 'Cmd' : 'Ctrl')
       .replace('Command', 'Cmd')
       .replace('Control', 'Ctrl')
       .replace('Shift', 'Shift')
-      .replace('Alt', navigator.platform.includes('Mac') ? 'Option' : 'Alt')
+      .replace('Alt', isMac ? 'Option' : 'Alt')
       .replace(/\+/g, ' + ');
   }
 
@@ -212,6 +230,11 @@
     isCapturingShortcut = true;
     capturedKeys = [];
     shortcutError = '';
+    // Focus the capture box after a tick
+    setTimeout(() => {
+      const captureBox = document.querySelector('.shortcut-capture-box') as HTMLElement;
+      if (captureBox) captureBox.focus();
+    }, 50);
   }
 
   function cancelShortcutCapture() {
@@ -220,15 +243,46 @@
     shortcutError = '';
   }
 
+  // Map special keys to Tauri-compatible names
+  function normalizeKeyName(key: string): string {
+    const keyMap: Record<string, string> = {
+      ' ': 'Space',
+      'ArrowUp': 'Up',
+      'ArrowDown': 'Down',
+      'ArrowLeft': 'Left',
+      'ArrowRight': 'Right',
+      'Escape': 'Escape',
+      'Enter': 'Enter',
+      'Backspace': 'Backspace',
+      'Delete': 'Delete',
+      'Tab': 'Tab',
+      'Home': 'Home',
+      'End': 'End',
+      'PageUp': 'PageUp',
+      'PageDown': 'PageDown',
+    };
+
+    if (keyMap[key]) return keyMap[key];
+    if (key.length === 1) return key.toUpperCase();
+    return key;
+  }
+
   async function handleKeyDown(event: KeyboardEvent) {
     if (!isCapturingShortcut) return;
 
     event.preventDefault();
     event.stopPropagation();
 
-    // Build the shortcut string
+    // Build the shortcut string - on Mac, use Command (metaKey)
     const modifiers: string[] = [];
-    if (event.metaKey || event.ctrlKey) modifiers.push('CommandOrControl');
+
+    // On Mac: metaKey = Cmd, ctrlKey = Control
+    // We use CommandOrControl which maps to Cmd on Mac, Ctrl on Windows
+    if (isMac) {
+      if (event.metaKey) modifiers.push('CommandOrControl');
+    } else {
+      if (event.ctrlKey) modifiers.push('CommandOrControl');
+    }
     if (event.shiftKey) modifiers.push('Shift');
     if (event.altKey) modifiers.push('Alt');
 
@@ -242,13 +296,28 @@
 
     // Validate: must have at least one modifier
     if (modifiers.length === 0) {
-      shortcutError = 'Shortcut must include Cmd/Ctrl, Shift, or Alt';
+      shortcutError = isMac
+        ? 'Shortcut must include Cmd, Shift, or Option'
+        : 'Shortcut must include Ctrl, Shift, or Alt';
       return;
     }
 
-    // Build final shortcut
-    const keyName = key.length === 1 ? key.toUpperCase() : key;
+    // Normalize the key name for Tauri
+    const keyName = normalizeKeyName(key);
     const newShortcut = [...modifiers, keyName].join('+');
+
+    // Check for reserved/conflicting shortcuts
+    if (isReservedShortcut(newShortcut)) {
+      shortcutError = `"${formatShortcutDisplay(newShortcut)}" is a system shortcut. Choose a different combination.`;
+      return;
+    }
+
+    // Recommend using Shift modifier for safety
+    if (!modifiers.includes('Shift') && modifiers.length === 1) {
+      // Single modifier + key - might conflict
+      shortcutError = `Tip: Add Shift for better compatibility (e.g., ${formatShortcutDisplay('CommandOrControl+Shift+' + keyName)})`;
+      // Still allow it after showing warning - user can try again or proceed
+    }
 
     // Save the shortcut
     try {
@@ -547,7 +616,7 @@
               tabindex="0"
               role="textbox"
             >
-              <div class="capture-label">Press your desired shortcut...</div>
+              <div class="capture-label">Press your shortcut (use {isMac ? 'Cmd' : 'Ctrl'}+Shift+Key)</div>
               <div class="capture-preview">
                 {#if capturedKeys.length > 0}
                   {capturedKeys.map(k => k.replace('CommandOrControl', 'Cmd')).join(' + ')} + ...
