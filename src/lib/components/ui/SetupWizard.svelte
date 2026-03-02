@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, scale } from 'svelte/transition';
+  import { invoke } from '@tauri-apps/api/core';
   import { updateSetting } from '../../stores/settingsStore';
   import { showSuccess } from '../../stores/toastStore';
 
@@ -13,9 +14,18 @@
 
   const steps = [
     { id: 'welcome', title: 'Welcome' },
+    { id: 'permissions', title: 'Permissions' },
     { id: 'shortcut', title: 'Shortcut' },
     { id: 'ready', title: 'Done' }
   ];
+
+  async function openAccessibilitySettings() {
+    try {
+      await invoke('open_accessibility_settings');
+    } catch (e) {
+      console.error('Failed to open settings:', e);
+    }
+  }
 
   function nextStep() {
     if (currentStep < steps.length - 1) {
@@ -98,6 +108,24 @@
           </div>
         {:else if currentStep === 1}
           <div class="step" transition:fade={{ duration: 100 }}>
+            <div class="icon permission">
+              <svg viewBox="0 0 32 32" fill="none">
+                <rect x="6" y="10" width="20" height="16" rx="3" fill="#f7e479"/>
+                <circle cx="16" cy="18" r="3" fill="#000"/>
+                <rect x="14" y="4" width="4" height="8" rx="2" fill="#f7e479"/>
+              </svg>
+            </div>
+            <h2>Enable Accessibility</h2>
+            <p>CopyGum needs permission to show over other apps and respond to shortcuts.</p>
+            <button class="permission-btn" on:click={openAccessibilitySettings}>
+              Open Settings
+            </button>
+            <div class="hint">
+              Find CopyGum in the list and toggle it ON
+            </div>
+          </div>
+        {:else if currentStep === 2}
+          <div class="step" transition:fade={{ duration: 100 }}>
             <div class="shortcut-box">
               <kbd>{isMac ? 'Cmd' : 'Ctrl'}</kbd>
               <span>+</span>
@@ -107,11 +135,7 @@
             </div>
             <p>Press this shortcut anywhere to toggle CopyGum</p>
             <div class="hint">
-              {#if isMac}
-                Grant accessibility permission if prompted
-              {:else}
-                Works anywhere, no extra permissions needed
-              {/if}
+              You can customize this in Settings later
             </div>
           </div>
         {:else}
@@ -261,6 +285,24 @@
     border-radius: 8px;
     font-size: 12px;
     color: rgba(255, 255, 255, 0.7);
+  }
+
+  .permission-btn {
+    margin: 16px 0 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #f7e479, #f5d94a);
+    border: none;
+    border-radius: 10px;
+    color: #0a0a0a;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .permission-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 228, 121, 0.3);
   }
 
   .nav-btn {

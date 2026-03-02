@@ -10,6 +10,7 @@ mod settings;
 mod export;
 mod app_detector;
 mod app_icons;
+mod permissions;
 
 
 fn main() {
@@ -48,6 +49,10 @@ fn main() {
             export::get_export_stats,
             app_icons::get_app_icon_data,
             image_handler::get_image_base64,
+            permissions::open_accessibility_settings,
+            permissions::open_screen_recording_settings,
+            permissions::check_first_run,
+            permissions::mark_setup_complete,
         ])
         .manage(clipboard_monitor::ClipboardMonitor::new())
         .setup(|app| {
@@ -68,8 +73,9 @@ fn main() {
                     use cocoa::base::{id, NO};
                     use objc::{msg_send, sel, sel_impl};
 
-                    // NSStatusWindowLevel = 25 (same as window_manager.rs)
-                    const OVERLAY_WINDOW_LEVEL: i64 = 25;
+                    // NSScreenSaverWindowLevel = 1000 (same as window_manager.rs)
+                    // High level to appear over full-screen apps
+                    const OVERLAY_WINDOW_LEVEL: i64 = 1000;
 
                     if let Ok(ns_win_ptr) = window.ns_window() {
                         #[allow(deprecated)]

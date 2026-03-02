@@ -361,6 +361,15 @@
     }
   }
 
+  // Permission settings
+  async function openAccessibilitySettings() {
+    try {
+      await invoke('open_accessibility_settings');
+    } catch (e) {
+      console.error('Failed to open settings:', e);
+    }
+  }
+
   // Update handlers
   interface UpdateInfo {
     available: boolean;
@@ -597,6 +606,21 @@
             />
             <span class="toggle-slider"></span>
           </label>
+        </div>
+      </div>
+
+      <!-- Permissions -->
+      <div class="settings-section">
+        <div class="settings-section-title">Permissions</div>
+        <div class="permissions-grid">
+          <button class="permission-item" on:click={openAccessibilitySettings}>
+            <div class="permission-icon">🔐</div>
+            <div class="permission-info">
+              <div class="permission-name">Accessibility</div>
+              <div class="permission-desc">Required for shortcuts & overlay</div>
+            </div>
+            <div class="permission-arrow">→</div>
+          </button>
         </div>
       </div>
 
@@ -2477,5 +2501,65 @@
   .capture-cancel-btn:hover {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Permissions Section */
+  .permissions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .permission-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(247, 228, 121, 0.08);
+    border: 1px solid rgba(247, 228, 121, 0.15);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+    width: 100%;
+  }
+
+  .permission-item:hover {
+    background: rgba(247, 228, 121, 0.15);
+    border-color: rgba(247, 228, 121, 0.3);
+    transform: translateX(2px);
+  }
+
+  .permission-icon {
+    font-size: 20px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(247, 228, 121, 0.15);
+    border-radius: 8px;
+  }
+
+  .permission-info {
+    flex: 1;
+  }
+
+  .permission-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .permission-desc {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+  }
+
+  .permission-arrow {
+    color: rgba(247, 228, 121, 0.7);
+    font-size: 16px;
+    font-weight: 600;
   }
 </style>
