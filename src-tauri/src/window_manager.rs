@@ -8,9 +8,11 @@ use cocoa::appkit::{NSWindow, NSWindowCollectionBehavior};
 use cocoa::base::{id, NO};
 
 // Window level constants for macOS
-// NSStatusWindowLevel (25) - above normal windows and floating panels, below alerts
-// This is the level used by menu bar extras and overlay utilities
-const OVERLAY_WINDOW_LEVEL: i64 = 25;
+// Higher level = appears above more windows
+// NSPopUpMenuWindowLevel (101) - above menus and popovers
+// NSScreenSaverWindowLevel (1000) - above screen saver, appears over full-screen apps
+// We use a high level to ensure visibility over all apps including full-screen
+const OVERLAY_WINDOW_LEVEL: i64 = 1000;
 
 #[allow(deprecated)]
 #[tauri::command]
