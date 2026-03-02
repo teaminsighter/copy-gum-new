@@ -622,6 +622,9 @@
             <div class="permission-arrow">→</div>
           </button>
         </div>
+        <div class="permission-note">
+          After enabling, restart CopyGum for changes to take effect
+        </div>
       </div>
 
       <!-- Keyboard Shortcut -->
@@ -2561,5 +2564,16 @@
     color: rgba(247, 228, 121, 0.7);
     font-size: 16px;
     font-weight: 600;
+  }
+
+  .permission-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
   }
 </style>

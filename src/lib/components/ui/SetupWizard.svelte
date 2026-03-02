@@ -121,7 +121,8 @@
               Open Settings
             </button>
             <div class="hint">
-              Find CopyGum in the list and toggle it ON
+              Find CopyGum in the list and toggle it ON.<br/>
+              Restart CopyGum after enabling.
             </div>
           </div>
         {:else if currentStep === 2}
